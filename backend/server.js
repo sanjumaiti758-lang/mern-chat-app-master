@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require("cors");
 const connectDB = require("./config/db");
 const dotenv = require("dotenv");
 const userRoutes = require("./routes/userRoutes");
@@ -11,11 +12,18 @@ dotenv.config();
 connectDB();
 const app = express();
 
+app.use(cors());
 app.use(express.json()); // to accept json data
 
-// app.get("/", (req, res) => {
-//   res.send("API Running!");
-// });
+// Middleware to ensure DB connection is ready on serverless calls
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+  } catch (err) {
+    console.error("DB connection error in middleware:", err.message);
+  }
+  next();
+});
 
 app.use("/api/user", userRoutes);
 app.use("/api/chat", chatRoutes);
@@ -25,7 +33,7 @@ app.use("/api/message", messageRoutes);
 
 const __dirname1 = path.resolve();
 
-if (process.env.NODE_ENV === "production") {
+if (process.env.NODE_ENV === "production" && !process.env.VERCEL) {
   app.use(express.static(path.join(__dirname1, "/frontend/build")));
 
   app.get("*", (req, res) =>
@@ -45,58 +53,62 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
-  console.log(`Server running on PORT ${PORT}...`.yellow.bold);
-});
-
-server.on("error", (err) => {
-  if (err.code === "EADDRINUSE") {
-    console.error(`Port ${PORT} is already in use by another process.`.red.bold);
-  } else {
-    console.error(`Server error: ${err.message}`.red.bold);
-  }
-  process.exit(1);
-});
-
-const io = require("socket.io")(server, {
-  pingTimeout: 60000,
-  cors: {
-    origin: "http://localhost:3000",
-    // credentials: true,
-  },
-});
-
-io.on("connection", (socket) => {
-  console.log("Connected to socket.io");
-  let userRoom = null;
-
-  socket.on("setup", (userData) => {
-    userRoom = userData?._id;
-    socket.join(userRoom);
-    socket.emit("connected");
+if (!process.env.VERCEL) {
+  const server = app.listen(PORT, () => {
+    console.log(`Server running on PORT ${PORT}...`.yellow.bold);
   });
 
-  socket.on("join chat", (room) => {
-    socket.join(room);
-    console.log("User Joined Room: " + room);
+  server.on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`Port ${PORT} is already in use by another process.`.red.bold);
+    } else {
+      console.error(`Server error: ${err.message}`.red.bold);
+    }
+    process.exit(1);
   });
-  socket.on("typing", (room) => socket.in(room).emit("typing"));
-  socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
 
-  socket.on("new message", (newMessageRecieved) => {
-    var chat = newMessageRecieved.chat;
+  const io = require("socket.io")(server, {
+    pingTimeout: 60000,
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"],
+    },
+  });
 
-    if (!chat.users) return console.log("chat.users not defined");
+  io.on("connection", (socket) => {
+    console.log("Connected to socket.io");
+    let userRoom = null;
 
-    chat.users.forEach((user) => {
-      if (user._id == newMessageRecieved.sender._id) return;
+    socket.on("setup", (userData) => {
+      userRoom = userData?._id;
+      socket.join(userRoom);
+      socket.emit("connected");
+    });
 
-      socket.in(user._id).emit("message recieved", newMessageRecieved);
+    socket.on("join chat", (room) => {
+      socket.join(room);
+      console.log("User Joined Room: " + room);
+    });
+    socket.on("typing", (room) => socket.in(room).emit("typing"));
+    socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
+
+    socket.on("new message", (newMessageRecieved) => {
+      var chat = newMessageRecieved.chat;
+
+      if (!chat.users) return console.log("chat.users not defined");
+
+      chat.users.forEach((user) => {
+        if (user._id == newMessageRecieved.sender._id) return;
+
+        socket.in(user._id).emit("message recieved", newMessageRecieved);
+      });
+    });
+
+    socket.on("disconnect", () => {
+      console.log("USER DISCONNECTED");
+      if (userRoom) socket.leave(userRoom);
     });
   });
+}
 
-  socket.on("disconnect", () => {
-    console.log("USER DISCONNECTED");
-    if (userRoom) socket.leave(userRoom);
-  });
-});
+module.exports = app;

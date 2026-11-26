@@ -47,9 +47,29 @@ const seedUsers = async () => {
 };
 
 const connectDB = async () => {
+  if (mongoose.connection.readyState >= 1) {
+    return;
+  }
+
   let uri = process.env.MONGO_URI || process.env.MONGODB_URI;
 
-  // Try Atlas/Remote URI first if provided
+  // On Vercel serverless environment, connect to remote MongoDB Atlas directly
+  if (process.env.VERCEL) {
+    if (!uri) {
+      console.error("Error: MONGO_URI environment variable is missing on Vercel!".red.bold);
+      return;
+    }
+    try {
+      const conn = await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
+      console.log(`MongoDB Connected (Vercel): ${conn.connection.host}`.cyan.underline);
+      return;
+    } catch (error) {
+      console.error(`MongoDB Connection Error on Vercel: ${error.message}`.red.bold);
+      return;
+    }
+  }
+
+  // Local development: Try Atlas/Remote URI first if provided
   if (uri && uri !== "memory" && !uri.includes("<db_password>")) {
     try {
       const conn = await mongoose.connect(uri, { serverSelectionTimeoutMS: 3000 });
@@ -61,9 +81,11 @@ const connectDB = async () => {
     }
   }
 
-  // Fallback to local in-memory MongoDB so the app always runs
+  // Fallback to local in-memory MongoDB so the app always runs locally
   try {
-    mongod = await MongoMemoryServer.create();
+    if (!mongod) {
+      mongod = await MongoMemoryServer.create();
+    }
     uri = mongod.getUri();
     const conn = await mongoose.connect(uri);
     console.log(`MongoDB Connected (Local In-Memory DB): ${conn.connection.host}`.green.underline.bold);
@@ -75,4 +97,3 @@ const connectDB = async () => {
 };
 
 module.exports = connectDB;
-
