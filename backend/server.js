@@ -12,7 +12,14 @@ dotenv.config();
 connectDB();
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+app.options("*", cors());
 app.use(express.json()); // to accept json data
 
 // Middleware to ensure DB connection is ready on serverless calls
@@ -25,9 +32,15 @@ app.use(async (req, res, next) => {
   next();
 });
 
+// Support both /api/* and direct routes for Vercel rewrites
 app.use("/api/user", userRoutes);
+app.use("/user", userRoutes);
+
 app.use("/api/chat", chatRoutes);
+app.use("/chat", chatRoutes);
+
 app.use("/api/message", messageRoutes);
+app.use("/message", messageRoutes);
 
 // --------------------------deployment------------------------------
 
