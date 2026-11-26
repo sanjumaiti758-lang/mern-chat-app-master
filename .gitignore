@@ -1,0 +1,11 @@
+/node_modules
+node_modules/
+/frontend/node_modules/
+.env
+node_modules/
+**/node_modules/
+.env
+.env.*
+!.env.example
+*.log
+atlas-credentials.env
