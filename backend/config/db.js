@@ -51,7 +51,10 @@ const connectDB = async () => {
     return;
   }
 
-  let uri = process.env.MONGO_URI || process.env.MONGODB_URI;
+  let uri =
+    process.env.MONGO_URI ||
+    process.env.MONGODB_URI ||
+    "mongodb+srv://sanjumaiti758_db_user:bRE2vvzvgHL89Oyp@cluster0.0stqjkk.mongodb.net/chat-app?retryWrites=true&w=majority";
 
   // On Vercel serverless environment, connect to remote MongoDB Atlas directly
   if (process.env.VERCEL) {
