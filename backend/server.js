@@ -73,7 +73,10 @@ if (!process.env.VERCEL) {
 
   server.on("error", (err) => {
     if (err.code === "EADDRINUSE") {
-      console.error(`Port ${PORT} is already in use by another process.`.red.bold);
+      console.error(
+        `Port ${PORT} is already in use by another process. Run 'npm run kill-port' to free it.`
+          .red.bold
+      );
     } else {
       console.error(`Server error: ${err.message}`.red.bold);
     }
