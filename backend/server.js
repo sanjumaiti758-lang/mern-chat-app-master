@@ -120,6 +120,15 @@ if (!process.env.VERCEL) {
       });
     });
 
+    socket.on("message reaction", (updatedMessage) => {
+      var chat = updatedMessage && updatedMessage.chat;
+      if (!chat || !chat.users) return;
+
+      chat.users.forEach((user) => {
+        socket.in(user._id).emit("message reaction updated", updatedMessage);
+      });
+    });
+
     socket.on("disconnect", () => {
       console.log("USER DISCONNECTED");
       if (userRoom) socket.leave(userRoom);

@@ -15,6 +15,7 @@ import animationData from "../animations/typing.json";
 import io from "socket.io-client";
 import UpdateGroupChatModal from "./miscellaneous/UpdateGroupChatModal";
 import { ChatState } from "../Context/ChatProvider";
+
 const ENDPOINT =
   process.env.REACT_APP_ENDPOINT ||
   process.env.REACT_APP_API_URL ||
@@ -60,7 +61,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       setMessages(data);
       setLoading(false);
 
-      socket.emit("join chat", selectedChat._id);
+      if (socket) socket.emit("join chat", selectedChat._id);
     } catch (error) {
       toast({
         title: "Error Occured!",
@@ -74,36 +75,79 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   };
 
   const sendMessage = async (event) => {
-    if (event.key === "Enter" && newMessage) {
-      socket.emit("stop typing", selectedChat._id);
-      try {
-        const config = {
-          headers: {
-            "Content-type": "application/json",
-            Authorization: `Bearer ${user.token}`,
-          },
-        };
-        setNewMessage("");
-        const { data } = await axios.post(
-          "/api/message",
-          {
-            content: newMessage,
-            chatId: selectedChat,
-          },
-          config
-        );
-        socket.emit("new message", data);
-        setMessages([...messages, data]);
-      } catch (error) {
-        toast({
-          title: "Error Occured!",
-          description: "Failed to send the Message",
-          status: "error",
-          duration: 5000,
-          isClosable: true,
-          position: "bottom",
-        });
-      }
+    if ((event && event.key && event.key !== "Enter") || !newMessage.trim()) {
+      return;
+    }
+
+    if (event && event.preventDefault) {
+      event.preventDefault();
+    }
+
+    if (socket) socket.emit("stop typing", selectedChat._id);
+    try {
+      const config = {
+        headers: {
+          "Content-type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+      };
+      const messageContent = newMessage.trim();
+      setNewMessage("");
+      const { data } = await axios.post(
+        "/api/message",
+        {
+          content: messageContent,
+          chatId: selectedChat._id || selectedChat,
+        },
+        config
+      );
+      if (socket) socket.emit("new message", data);
+      setMessages((prev) => [...prev, data]);
+    } catch (error) {
+      toast({
+        title: "Error Occured!",
+        description:
+          error.response?.data?.message || "Failed to send the Message",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+        position: "bottom",
+      });
+    }
+  };
+
+  const handleReaction = async (messageId, emoji) => {
+    try {
+      const config = {
+        headers: {
+          "Content-type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+      };
+      const { data } = await axios.put(
+        "/api/message/reaction",
+        {
+          messageId,
+          emoji,
+        },
+        config
+      );
+
+      setMessages((prev) =>
+        prev.map((m) => (m._id === data._id ? data : m))
+      );
+
+      if (socket) socket.emit("message reaction", data);
+    } catch (error) {
+      toast({
+        title: "Error Occured!",
+        description:
+          error.response?.data?.message || "Failed to update reaction",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+        position: "bottom-right",
+      });
     }
   };
 
@@ -125,19 +169,37 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   }, [selectedChat]);
 
   useEffect(() => {
-    socket.on("message recieved", (newMessageRecieved) => {
+    const handleMessageReceived = (newMessageRecieved) => {
       if (
-        !selectedChatCompare || // if chat is not selected or doesn't match current chat
+        !selectedChatCompare ||
         selectedChatCompare._id !== newMessageRecieved.chat._id
       ) {
-        if (!notification.includes(newMessageRecieved)) {
+        if (!notification.some((n) => n._id === newMessageRecieved._id)) {
           setNotification([newMessageRecieved, ...notification]);
           setFetchAgain(!fetchAgain);
         }
       } else {
-        setMessages([...messages, newMessageRecieved]);
+        setMessages((prev) => [...prev, newMessageRecieved]);
       }
-    });
+    };
+
+    const handleReactionUpdate = (updatedMessage) => {
+      setMessages((prev) =>
+        prev.map((m) => (m._id === updatedMessage._id ? updatedMessage : m))
+      );
+    };
+
+    if (socket) {
+      socket.on("message recieved", handleMessageReceived);
+      socket.on("message reaction updated", handleReactionUpdate);
+    }
+
+    return () => {
+      if (socket) {
+        socket.off("message recieved", handleMessageReceived);
+        socket.off("message reaction updated", handleReactionUpdate);
+      }
+    };
   });
 
   const typingHandler = (e) => {
@@ -204,7 +266,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
             flexDir="column"
             justifyContent="flex-end"
             p={3}
-            bg="#E8E8E8"
+            bg="#EFEAE2"
             w="100%"
             h="100%"
             borderRadius="lg"
@@ -220,12 +282,14 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
               />
             ) : (
               <div className="messages">
-                <ScrollableChat messages={messages} />
+                <ScrollableChat
+                  messages={messages}
+                  onReaction={handleReaction}
+                />
               </div>
             )}
 
             <FormControl
-              onKeyDown={sendMessage}
               id="first-name"
               isRequired
               mt={3}
@@ -234,26 +298,54 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                 <div>
                   <Lottie
                     options={defaultOptions}
-                    // height={50}
                     width={70}
-                    style={{ marginBottom: 15, marginLeft: 0 }}
+                    style={{ marginBottom: 10, marginLeft: 0 }}
                   />
                 </div>
               ) : (
                 <></>
               )}
-              <Input
-                variant="filled"
-                bg="#E0E0E0"
-                placeholder="Enter a message.."
-                value={newMessage}
-                onChange={typingHandler}
-              />
+              <Box d="flex" alignItems="center" gap={2}>
+                <Input
+                  variant="filled"
+                  bg="#FFFFFF"
+                  _focus={{ bg: "#FFFFFF", borderColor: "#00A884" }}
+                  borderRadius="24px"
+                  placeholder="Type a message..."
+                  value={newMessage}
+                  onChange={typingHandler}
+                  onKeyDown={sendMessage}
+                  py={2}
+                  px={4}
+                />
+                <IconButton
+                  aria-label="Send message"
+                  bg="#00A884"
+                  _hover={{ bg: "#008F6F" }}
+                  color="white"
+                  borderRadius="full"
+                  onClick={() => sendMessage()}
+                  icon={
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                  }
+                />
+              </Box>
             </FormControl>
           </Box>
         </>
       ) : (
-        // to get socket.io on same page
         <Box d="flex" alignItems="center" justifyContent="center" h="100%">
           <Text fontSize="3xl" pb={3} fontFamily="Work sans">
             Click on a user to start chatting
