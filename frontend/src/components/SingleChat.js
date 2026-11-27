@@ -36,6 +36,7 @@ import animationData from "../animations/typing.json";
 import io from "socket.io-client";
 import UpdateGroupChatModal from "./miscellaneous/UpdateGroupChatModal";
 import { ChatState } from "../Context/ChatProvider";
+import chatDoodle from "../chat-doodle.svg";
 
 const ENDPOINT =
   process.env.REACT_APP_ENDPOINT ||
@@ -79,8 +80,64 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       preserveAspectRatio: "xMidYMid slice",
     },
   };
-  const { selectedChat, setSelectedChat, user, notification, setNotification } =
+  const { selectedChat, setSelectedChat, user, notification, setNotification, wallpaper } =
     ChatState();
+
+  const getChatBackgroundStyles = () => {
+    const wp = wallpaper || "doodle";
+    if (wp === "minimal") {
+      return {
+        bg: isDark ? "#0B141A" : "#EFEAE2",
+      };
+    }
+    if (wp === "emerald") {
+      return {
+        bg: isDark
+          ? "linear-gradient(160deg, #062b22 0%, #031c16 100%)"
+          : "linear-gradient(160deg, #dcf8c6 0%, #c5edd2 100%)",
+        backgroundImage: `url(${chatDoodle})`,
+        backgroundRepeat: "repeat",
+        backgroundSize: "320px 320px",
+      };
+    }
+    if (wp === "midnight") {
+      return {
+        bg: isDark
+          ? "linear-gradient(160deg, #090e17 0%, #030712 100%)"
+          : "linear-gradient(160deg, #1e293b 0%, #0f172a 100%)",
+        backgroundImage: `url(${chatDoodle})`,
+        backgroundRepeat: "repeat",
+        backgroundSize: "320px 320px",
+      };
+    }
+    if (wp === "sky") {
+      return {
+        bg: isDark
+          ? "linear-gradient(160deg, #0d1e30 0%, #09131d 100%)"
+          : "linear-gradient(160deg, #e0f2fe 0%, #bae6fd 100%)",
+        backgroundImage: `url(${chatDoodle})`,
+        backgroundRepeat: "repeat",
+        backgroundSize: "320px 320px",
+      };
+    }
+    if (wp === "warm") {
+      return {
+        bg: isDark
+          ? "linear-gradient(160deg, #261e1b 0%, #171210 100%)"
+          : "linear-gradient(160deg, #fef3c7 0%, #fde68a 100%)",
+        backgroundImage: `url(${chatDoodle})`,
+        backgroundRepeat: "repeat",
+        backgroundSize: "320px 320px",
+      };
+    }
+    // Default: WhatsApp Classic Doodle
+    return {
+      bg: isDark ? "#0B141A" : "#EFEAE2",
+      backgroundImage: `url(${chatDoodle})`,
+      backgroundRepeat: "repeat",
+      backgroundSize: "320px 320px",
+    };
+  };
 
   const fetchMessages = async () => {
     if (!selectedChat) return;
@@ -677,12 +734,12 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
             flexDir="column"
             justifyContent="flex-end"
             p={3}
-            bg={isDark ? "#0B141A" : "#EFEAE2"}
+            {...getChatBackgroundStyles()}
             w="100%"
             h="100%"
             borderRadius="lg"
             overflowY="hidden"
-            transition="background-color 0.2s ease"
+            transition="all 0.2s ease"
           >
             {loading ? (
               <Spinner

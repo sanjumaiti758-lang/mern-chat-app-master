@@ -12,6 +12,9 @@ const ChatProvider = ({ children }) => {
   const [themeMode, setThemeModeState] = useState(
     localStorage.getItem("chat_theme_mode") || "system"
   );
+  const [wallpaper, setWallpaperState] = useState(
+    localStorage.getItem("chat_wallpaper") || "doodle"
+  );
 
   const history = useHistory();
   const { setColorMode } = useColorMode();
@@ -29,6 +32,12 @@ const ChatProvider = ({ children }) => {
     } else {
       setColorMode(mode);
     }
+  };
+
+  // Handle Chat Wallpaper Switching
+  const changeWallpaper = (newWp) => {
+    setWallpaperState(newWp);
+    localStorage.setItem("chat_wallpaper", newWp);
   };
 
   useEffect(() => {
@@ -73,6 +82,8 @@ const ChatProvider = ({ children }) => {
         setChats,
         themeMode,
         changeThemeMode,
+        wallpaper,
+        changeWallpaper,
       }}
     >
       {children}

@@ -17,8 +17,10 @@ const Chatpage = () => {
       style={{
         width: "100%",
         minHeight: "100vh",
-        backgroundColor: isDark ? "#0C1317" : "#F0F2F5",
-        transition: "background-color 0.2s ease",
+        background: isDark
+          ? "linear-gradient(to bottom, #00A884 0px, #00A884 128px, #0C1317 128px, #0C1317 100%)"
+          : "linear-gradient(to bottom, #00A884 0px, #00A884 128px, #D1D7DB 128px, #D1D7DB 100%)",
+        transition: "background 0.3s ease",
       }}
     >
       {user && <SideDrawer />}

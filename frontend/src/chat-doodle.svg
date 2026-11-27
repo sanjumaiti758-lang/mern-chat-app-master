@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300" opacity="0.06">
+  <defs>
+    <style>
+      .icon { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+  <!-- Chat Bubble 1 -->
+  <path class="icon" d="M30 40 h40 a10 10 0 0 1 10 10 v20 a10 10 0 0 1 -10 10 h-20 l-10 10 v-10 h-10 a10 10 0 0 1 -10 -10 v-20 a10 10 0 0 1 10 -10 z" />
+  <circle cx="45" cy="60" r="2" fill="currentColor" />
+  <circle cx="55" cy="60" r="2" fill="currentColor" />
+  <circle cx="65" cy="60" r="2" fill="currentColor" />
+
+  <!-- Paper Plane -->
+  <path class="icon" d="M120 30 l30 15 -30 15 5 -15 -5 -15 z M125 45 l15 -5" />
+
+  <!-- Coffee Cup -->
+  <path class="icon" d="M190 40 h25 v20 a12 12 0 0 1 -12 12 h-1 a12 12 0 0 1 -12 -12 z M215 45 h6 a5 5 0 0 1 5 5 v2 a5 5 0 0 1 -5 5 h-6 M185 75 h35" />
+
+  <!-- Star -->
+  <polygon class="icon" points="265,35 268,44 278,44 270,50 273,59 265,53 257,59 260,50 252,44 262,44" />
+
+  <!-- Camera -->
+  <path class="icon" d="M40 130 h35 a5 5 0 0 1 5 5 v20 a5 5 0 0 1 -5 5 h-35 a5 5 0 0 1 -5 -5 v-20 a5 5 0 0 1 5 -5 z M50 130 l3 -6 h10 l3 6" />
+  <circle cx="57" cy="142" r="6" class="icon" />
+
+  <!-- Music Note -->
+  <path class="icon" d="M125 125 v25 a6 6 0 1 1 -6 -6 c2 0 4 1 6 2 v-21 h16 v25 a6 6 0 1 1 -6 -6 c2 0 4 1 6 2 v-21 z" />
+
+  <!-- Heart -->
+  <path class="icon" d="M200 135 a7 7 0 0 0 -10 0 l-2 2 -2 -2 a7 7 0 0 0 -10 10 l14 14 14 -14 a7 7 0 0 0 -4 -10 z" />
+
+  <!-- Clock -->
+  <circle cx="265" cy="140" r="14" class="icon" />
+  <path class="icon" d="M265 132 v8 l5 3" />
+
+  <!-- Headphones -->
+  <path class="icon" d="M35 225 a18 18 0 0 1 36 0 v12 a4 4 0 0 1 -4 4 h-4 a4 4 0 0 1 -4 -4 v-8 a4 4 0 0 1 4 -4 h8 M63 229 h8 a4 4 0 0 1 4 4 v8 a4 4 0 0 1 -4 4 h-4 a4 4 0 0 1 -4 -4 z" />
+
+  <!-- Smile Emoji -->
+  <circle cx="130" cy="225" r="15" class="icon" />
+  <circle cx="125" cy="220" r="1.5" fill="currentColor" />
+  <circle cx="135" cy="220" r="1.5" fill="currentColor" />
+  <path class="icon" d="M124 229 q6 7 12 0" />
+
+  <!-- Speech bubble with heart -->
+  <path class="icon" d="M190 210 h30 a8 8 0 0 1 8 8 v14 a8 8 0 0 1 -8 8 h-12 l-8 7 v-7 h-10 a8 8 0 0 1 -8 -8 v-14 a8 8 0 0 1 8 -8 z" />
+  <path class="icon" d="M205 220 a3 3 0 0 0 -4 0 l-1 1 -1 -1 a3 3 0 0 0 -4 4 l6 6 6 -6 a3 3 0 0 0 -2 -4 z" />
+
+  <!-- Search / Magnifier -->
+  <circle cx="265" cy="225" r="8" class="icon" />
+  <path class="icon" d="M271 231 l7 7" />
+
+  <!-- Phone Handset -->
+  <path class="icon" d="M85 85 q-5 1 -8 4 q-5 5 -1 13 q6 12 17 17 q8 4 13 -1 q3 -3 4 -8 l-5 -3 -3 2 q-4 -3 -6 -6 l2 -3 z" />
+
+  <!-- Small dots and sparkles for seamless continuity -->
+  <circle cx="160" cy="95" r="2" fill="currentColor" />
+  <circle cx="230" cy="90" r="1.5" fill="currentColor" />
+  <circle cx="95" cy="180" r="1.5" fill="currentColor" />
+  <circle cx="170" cy="175" r="2" fill="currentColor" />
+  <circle cx="235" cy="180" r="1.5" fill="currentColor" />
+  <circle cx="35" cy="285" r="2" fill="currentColor" />
+  <circle cx="130" cy="280" r="1.5" fill="currentColor" />
+  <circle cx="205" cy="285" r="2" fill="currentColor" />
+  <circle cx="275" cy="280" r="1.5" fill="currentColor" />
+</svg>

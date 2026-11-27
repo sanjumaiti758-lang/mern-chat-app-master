@@ -3,9 +3,30 @@
 .App {
   min-height: 100vh;
   display: flex;
-  background-image: url("./background.png");
   background-position: center;
   background-size: cover;
+  background-attachment: fixed;
+  transition: background 0.3s ease;
+}
+
+/* Light mode background with WhatsApp signature top green band and subtle ambient glow */
+body[data-theme="light"] .App,
+.App {
+  background: 
+    linear-gradient(to bottom, #00A884 0px, #00A884 128px, transparent 128px),
+    radial-gradient(circle at 10% 25%, rgba(0, 168, 132, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 90% 75%, rgba(37, 99, 235, 0.08) 0%, transparent 45%),
+    linear-gradient(135deg, #E6ECEF 0%, #EFEFEF 50%, #D8DFE2 100%);
+  background-attachment: fixed;
+}
+
+/* Dark mode background with WhatsApp dark top green band and deep obsidian mesh */
+body[data-theme="dark"] .App {
+  background: 
+    linear-gradient(to bottom, #00A884 0px, #00A884 128px, transparent 128px),
+    radial-gradient(circle at 15% 25%, rgba(0, 168, 132, 0.16) 0%, transparent 45%),
+    radial-gradient(circle at 85% 75%, rgba(14, 165, 233, 0.10) 0%, transparent 45%),
+    linear-gradient(135deg, #090E11 0%, #0C1317 50%, #111B21 100%);
   background-attachment: fixed;
 }
 
