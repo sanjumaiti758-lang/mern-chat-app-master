@@ -129,6 +129,12 @@ if (!process.env.VERCEL) {
       });
     });
 
+    socket.on("delete message", (data) => {
+      var chatId = data && data.chatId;
+      if (!chatId) return;
+      socket.in(chatId).emit("message deleted", data);
+    });
+
     socket.on("disconnect", () => {
       console.log("USER DISCONNECTED");
       if (userRoom) socket.leave(userRoom);

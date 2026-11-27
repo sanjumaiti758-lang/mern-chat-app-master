@@ -11,7 +11,11 @@ const allMessages = asyncHandler(async (req, res) => {
     const messages = await Message.find({ chat: req.params.chatId })
       .populate("sender", "name pic email")
       .populate("chat")
-      .populate("reactions.user", "name pic");
+      .populate("reactions.user", "name pic")
+      .populate({
+        path: "replyTo",
+        populate: { path: "sender", select: "name pic" },
+      });
     res.json(messages);
   } catch (error) {
     res.status(400);
@@ -23,9 +27,9 @@ const allMessages = asyncHandler(async (req, res) => {
 //@route           POST /api/Message/
 //@access          Protected
 const sendMessage = asyncHandler(async (req, res) => {
-  const { content, chatId } = req.body;
+  const { content, chatId, replyTo, mediaUrl, mediaType } = req.body;
 
-  if (!content || !chatId) {
+  if ((!content && !mediaUrl) || !chatId) {
     console.log("Invalid data passed into request");
     return res.sendStatus(400);
   }
@@ -35,8 +39,11 @@ const sendMessage = asyncHandler(async (req, res) => {
 
   var newMessage = {
     sender: req.user._id,
-    content: content,
+    content: content || "",
     chat: targetChatId,
+    replyTo: replyTo || null,
+    mediaUrl: mediaUrl || "",
+    mediaType: mediaType || "",
     reactions: [],
   };
 
@@ -45,6 +52,10 @@ const sendMessage = asyncHandler(async (req, res) => {
 
     message = await message.populate("sender", "name pic");
     message = await message.populate("chat");
+    message = await message.populate({
+      path: "replyTo",
+      populate: { path: "sender", select: "name pic" },
+    });
     message = await User.populate(message, {
       path: "chat.users",
       select: "name pic email",
@@ -58,6 +69,28 @@ const sendMessage = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error(error.message);
   }
+});
+
+//@description     Delete Message
+//@route           DELETE /api/Message/:messageId
+//@access          Protected
+const deleteMessage = asyncHandler(async (req, res) => {
+  const { messageId } = req.params;
+
+  const message = await Message.findById(messageId);
+  if (!message) {
+    res.status(404);
+    throw new Error("Message not found");
+  }
+
+  const chatId = message.chat;
+  await Message.findByIdAndDelete(messageId);
+
+  // Update latestMessage in chat if needed
+  const latest = await Message.findOne({ chat: chatId }).sort({ createdAt: -1 });
+  await Chat.findByIdAndUpdate(chatId, { latestMessage: latest || null });
+
+  res.json({ message: "Message deleted successfully", messageId, chatId });
 });
 
 //@description     Add or Toggle Reaction on Message
@@ -104,7 +137,11 @@ const toggleReaction = asyncHandler(async (req, res) => {
   let updatedMessage = await Message.findById(messageId)
     .populate("sender", "name pic email")
     .populate("chat")
-    .populate("reactions.user", "name pic");
+    .populate("reactions.user", "name pic")
+    .populate({
+      path: "replyTo",
+      populate: { path: "sender", select: "name pic" },
+    });
 
   updatedMessage = await User.populate(updatedMessage, {
     path: "chat.users",
@@ -114,4 +151,4 @@ const toggleReaction = asyncHandler(async (req, res) => {
   res.json(updatedMessage);
 });
 
-module.exports = { allMessages, sendMessage, toggleReaction };
+module.exports = { allMessages, sendMessage, deleteMessage, toggleReaction };

@@ -6,6 +6,9 @@ const messageSchema = mongoose.Schema(
     content: { type: String, trim: true },
     chat: { type: mongoose.Schema.Types.ObjectId, ref: "Chat" },
     readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    replyTo: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
+    mediaUrl: { type: String, default: "" },
+    mediaType: { type: String, enum: ["image", "video", ""], default: "" },
     reactions: [
       {
         emoji: { type: String, required: true },

@@ -6,7 +6,7 @@ import { ChatState } from "../Context/ChatProvider";
 
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
-const ScrollableChat = ({ messages, onReaction }) => {
+const ScrollableChat = ({ messages, onReaction, onReply, onDelete }) => {
   const { user, selectedChat } = ChatState();
   const [activePickerId, setActivePickerId] = useState(null);
   const [hoveredMessageId, setHoveredMessageId] = useState(null);
@@ -74,6 +74,20 @@ const ScrollableChat = ({ messages, onReaction }) => {
           const isPickerOpen = activePickerId === m._id;
           const isHovered = hoveredMessageId === m._id;
 
+          const isImage =
+            m.mediaType === "image" ||
+            (m.mediaUrl &&
+              (m.mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)/i) ||
+                m.mediaType !== "video"));
+          const isVideo =
+            m.mediaType === "video" ||
+            (m.mediaUrl && m.mediaUrl.match(/\.(mp4|webm|mov|ogg)/i));
+
+          const showCaption =
+            m.content &&
+            m.content !== "📷 Photo" &&
+            m.content !== "🎥 Video";
+
           return (
             <div
               key={m._id || i}
@@ -122,15 +136,21 @@ const ScrollableChat = ({ messages, onReaction }) => {
                 </div>
               )}
 
-              {/* Reaction Trigger Button (Left of bubble for My messages) */}
+              {/* Action Buttons (Left of bubble for My messages) */}
               {isMyMessage && (
                 <div
                   style={{
                     position: "relative",
                     alignSelf: "center",
-                    marginRight: "4px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2px",
+                    marginRight: "6px",
+                    opacity: isHovered || isPickerOpen ? 1 : 0,
+                    transition: "opacity 0.15s ease",
                   }}
                 >
+                  {/* Reaction trigger */}
                   <button
                     type="button"
                     onClick={() =>
@@ -138,15 +158,13 @@ const ScrollableChat = ({ messages, onReaction }) => {
                     }
                     title="Add reaction"
                     style={{
-                      opacity: isHovered || isPickerOpen ? 1 : 0,
-                      transition: "opacity 0.15s ease",
-                      background: "rgba(255, 255, 255, 0.8)",
+                      background: "rgba(255, 255, 255, 0.85)",
                       border: "none",
                       borderRadius: "50%",
                       width: "26px",
                       height: "26px",
                       cursor: "pointer",
-                      fontSize: "14px",
+                      fontSize: "13px",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -154,6 +172,51 @@ const ScrollableChat = ({ messages, onReaction }) => {
                     }}
                   >
                     😊
+                  </button>
+
+                  {/* Reply button */}
+                  <button
+                    type="button"
+                    onClick={() => onReply && onReply(m)}
+                    title="Reply to message"
+                    style={{
+                      background: "rgba(255, 255, 255, 0.85)",
+                      border: "none",
+                      borderRadius: "50%",
+                      width: "26px",
+                      height: "26px",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    ↩️
+                  </button>
+
+                  {/* Delete button */}
+                  <button
+                    type="button"
+                    onClick={() => onDelete && onDelete(m._id)}
+                    title="Delete message"
+                    style={{
+                      background: "rgba(255, 255, 255, 0.85)",
+                      border: "none",
+                      borderRadius: "50%",
+                      width: "26px",
+                      height: "26px",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                      color: "#E53E3E",
+                    }}
+                  >
+                    🗑️
                   </button>
 
                   {/* Reaction Emoji Picker Popup */}
@@ -244,15 +307,100 @@ const ScrollableChat = ({ messages, onReaction }) => {
                           fontSize: "12px",
                           fontWeight: "bold",
                           color: "#128C7E",
-                          marginBottom: "2px",
+                          marginBottom: "3px",
                         }}
                       >
                         {senderName}
                       </div>
                     )}
 
-                  {/* Message Text */}
-                  <span style={{ marginRight: "4px" }}>{m.content}</span>
+                  {/* Quoted Reply Preview */}
+                  {m.replyTo && (
+                    <div
+                      style={{
+                        backgroundColor: isMyMessage
+                          ? "rgba(0, 0, 0, 0.06)"
+                          : "rgba(0, 0, 0, 0.04)",
+                        borderLeft: isMyMessage
+                          ? "3px solid #00A884"
+                          : "3px solid #128C7E",
+                        borderRadius: "6px",
+                        padding: "3px 8px",
+                        marginBottom: "6px",
+                        fontSize: "12px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontWeight: "bold",
+                          color: isMyMessage ? "#00A884" : "#128C7E",
+                          fontSize: "11px",
+                        }}
+                      >
+                        {m.replyTo.sender?.name || "User"}
+                      </div>
+                      <div
+                        style={{
+                          color: "#4A5568",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          maxWidth: "240px",
+                          fontSize: "12px",
+                        }}
+                      >
+                        {m.replyTo.mediaUrl
+                          ? m.replyTo.mediaType === "video"
+                            ? "🎥 Video"
+                            : "📷 Photo"
+                          : m.replyTo.content}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Photo Media */}
+                  {m.mediaUrl && isImage && (
+                    <a
+                      href={m.mediaUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: "block", marginBottom: showCaption ? "4px" : "2px" }}
+                    >
+                      <img
+                        src={m.mediaUrl}
+                        alt="Shared in chat"
+                        style={{
+                          borderRadius: "8px",
+                          maxWidth: "100%",
+                          maxHeight: "260px",
+                          objectFit: "cover",
+                          display: "block",
+                          cursor: "pointer",
+                        }}
+                      />
+                    </a>
+                  )}
+
+                  {/* Video Media */}
+                  {m.mediaUrl && isVideo && (
+                    <div style={{ marginBottom: showCaption ? "4px" : "2px" }}>
+                      <video
+                        controls
+                        src={m.mediaUrl}
+                        style={{
+                          borderRadius: "8px",
+                          maxWidth: "100%",
+                          maxHeight: "260px",
+                          display: "block",
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Text Message Content */}
+                  {(!m.mediaUrl || showCaption) && (
+                    <span style={{ marginRight: "4px" }}>{m.content}</span>
+                  )}
 
                   {/* Timestamp & Read Tick (WhatsApp style inline bottom-right) */}
                   <span
@@ -333,15 +481,21 @@ const ScrollableChat = ({ messages, onReaction }) => {
                 )}
               </div>
 
-              {/* Reaction Trigger Button (Right of bubble for Other contacts) */}
+              {/* Action Buttons (Right of bubble for Other contacts) */}
               {!isMyMessage && (
                 <div
                   style={{
                     position: "relative",
                     alignSelf: "center",
-                    marginLeft: "4px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2px",
+                    marginLeft: "6px",
+                    opacity: isHovered || isPickerOpen ? 1 : 0,
+                    transition: "opacity 0.15s ease",
                   }}
                 >
+                  {/* Reaction trigger */}
                   <button
                     type="button"
                     onClick={() =>
@@ -349,15 +503,13 @@ const ScrollableChat = ({ messages, onReaction }) => {
                     }
                     title="Add reaction"
                     style={{
-                      opacity: isHovered || isPickerOpen ? 1 : 0,
-                      transition: "opacity 0.15s ease",
-                      background: "rgba(255, 255, 255, 0.8)",
+                      background: "rgba(255, 255, 255, 0.85)",
                       border: "none",
                       borderRadius: "50%",
                       width: "26px",
                       height: "26px",
                       cursor: "pointer",
-                      fontSize: "14px",
+                      fontSize: "13px",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -365,6 +517,51 @@ const ScrollableChat = ({ messages, onReaction }) => {
                     }}
                   >
                     😊
+                  </button>
+
+                  {/* Reply button */}
+                  <button
+                    type="button"
+                    onClick={() => onReply && onReply(m)}
+                    title="Reply to message"
+                    style={{
+                      background: "rgba(255, 255, 255, 0.85)",
+                      border: "none",
+                      borderRadius: "50%",
+                      width: "26px",
+                      height: "26px",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    ↩️
+                  </button>
+
+                  {/* Delete button */}
+                  <button
+                    type="button"
+                    onClick={() => onDelete && onDelete(m._id)}
+                    title="Delete message"
+                    style={{
+                      background: "rgba(255, 255, 255, 0.85)",
+                      border: "none",
+                      borderRadius: "50%",
+                      width: "26px",
+                      height: "26px",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                      color: "#E53E3E",
+                    }}
+                  >
+                    🗑️
                   </button>
 
                   {/* Reaction Emoji Picker Popup */}
