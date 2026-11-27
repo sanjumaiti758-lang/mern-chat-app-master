@@ -53,7 +53,12 @@ const sendMessage = asyncHandler(async (req, res) => {
     formattedPoll = {
       question: poll.question.trim(),
       options: poll.options
-        .map((opt) => (typeof opt === "string" ? opt.trim() : opt.text?.trim()))
+        .map((opt) =>
+          (typeof opt === "string"
+            ? opt
+            : opt?.text || opt?.optionText || opt?.option || ""
+          ).trim()
+        )
         .filter(Boolean)
         .map((text) => ({ text, votes: [] })),
       allowMultipleAnswers: !!poll.allowMultipleAnswers,
