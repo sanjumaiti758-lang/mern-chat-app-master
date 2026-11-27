@@ -12,3 +12,5 @@ atlas-credentials.env
 /build
 /frontend/build
 build/
+.vercel
+.env*
