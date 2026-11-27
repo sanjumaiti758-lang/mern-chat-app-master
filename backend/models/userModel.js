@@ -12,13 +12,17 @@ const userSchema = mongoose.Schema(
       default:
         "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg",
     },
+    about: {
+      type: "String",
+      default: "Hey there! I am using Talk-a-tive",
+    },
     isAdmin: {
       type: Boolean,
       required: true,
       default: false,
     },
   },
-  { timestaps: true }
+  { timestamps: true }
 );
 
 userSchema.methods.matchPassword = async function (enteredPassword) {

@@ -29,7 +29,7 @@ const allUsers = asyncHandler(async (req, res) => {
 //@route           POST /api/user/
 //@access          Public
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password, pic } = req.body;
+  const { name, email, password, pic, about } = req.body;
 
   if (!name || !email || !password) {
     res.status(400);
@@ -48,6 +48,7 @@ const registerUser = asyncHandler(async (req, res) => {
     email,
     password,
     pic,
+    about: about || "Hey there! I am using Talk-a-tive",
   });
 
   if (user) {
@@ -57,6 +58,7 @@ const registerUser = asyncHandler(async (req, res) => {
       email: user.email,
       isAdmin: user.isAdmin,
       pic: user.pic,
+      about: user.about || "Hey there! I am using Talk-a-tive",
       token: generateToken(user._id),
     });
   } else {
@@ -80,6 +82,7 @@ const authUser = asyncHandler(async (req, res) => {
       email: user.email,
       isAdmin: user.isAdmin,
       pic: user.pic,
+      about: user.about || "Hey there! I am using Talk-a-tive",
       token: generateToken(user._id),
     });
   } else {
@@ -88,7 +91,7 @@ const authUser = asyncHandler(async (req, res) => {
   }
 });
 
-//@description     Update user profile (e.g. pic, name)
+//@description     Update user profile (pic, name, about)
 //@route           PUT /api/user/profile
 //@access          Protected
 const updateProfile = asyncHandler(async (req, res) => {
@@ -97,6 +100,7 @@ const updateProfile = asyncHandler(async (req, res) => {
   if (user) {
     if (req.body.name) user.name = req.body.name;
     if (req.body.pic) user.pic = req.body.pic;
+    if (req.body.about !== undefined) user.about = req.body.about;
 
     const updatedUser = await user.save();
 
@@ -106,6 +110,7 @@ const updateProfile = asyncHandler(async (req, res) => {
       email: updatedUser.email,
       isAdmin: updatedUser.isAdmin,
       pic: updatedUser.pic,
+      about: updatedUser.about || "Hey there! I am using Talk-a-tive",
       token: generateToken(updatedUser._id),
     });
   } else {

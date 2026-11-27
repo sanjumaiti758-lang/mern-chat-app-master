@@ -3,6 +3,7 @@ import { Avatar } from "@chakra-ui/avatar";
 import { Tooltip } from "@chakra-ui/tooltip";
 import ScrollableFeed from "react-scrollable-feed";
 import { ChatState } from "../Context/ChatProvider";
+import { useColorMode } from "@chakra-ui/react";
 
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
@@ -14,6 +15,9 @@ const ScrollableChat = ({
   onVotePoll,
 }) => {
   const { user, selectedChat } = ChatState();
+  const { colorMode } = useColorMode();
+  const isDark = colorMode === "dark";
+
   const [activePickerId, setActivePickerId] = useState(null);
   const [hoveredMessageId, setHoveredMessageId] = useState(null);
 
@@ -178,7 +182,9 @@ const ScrollableChat = ({
                     }
                     title="Add reaction"
                     style={{
-                      background: "rgba(255, 255, 255, 0.85)",
+                      background: isDark
+                        ? "rgba(32, 44, 51, 0.9)"
+                        : "rgba(255, 255, 255, 0.9)",
                       border: "none",
                       borderRadius: "50%",
                       width: "26px",
@@ -188,7 +194,7 @@ const ScrollableChat = ({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
                     }}
                   >
                     😊
@@ -200,7 +206,9 @@ const ScrollableChat = ({
                     onClick={() => onReply && onReply(m)}
                     title="Reply to message"
                     style={{
-                      background: "rgba(255, 255, 255, 0.85)",
+                      background: isDark
+                        ? "rgba(32, 44, 51, 0.9)"
+                        : "rgba(255, 255, 255, 0.9)",
                       border: "none",
                       borderRadius: "50%",
                       width: "26px",
@@ -210,7 +218,7 @@ const ScrollableChat = ({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
                     }}
                   >
                     ↩️
@@ -222,7 +230,9 @@ const ScrollableChat = ({
                     onClick={() => onDelete && onDelete(m._id)}
                     title="Delete message"
                     style={{
-                      background: "rgba(255, 255, 255, 0.85)",
+                      background: isDark
+                        ? "rgba(32, 44, 51, 0.9)"
+                        : "rgba(255, 255, 255, 0.9)",
                       border: "none",
                       borderRadius: "50%",
                       width: "26px",
@@ -232,7 +242,7 @@ const ScrollableChat = ({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
                       color: "#E53E3E",
                     }}
                   >
@@ -247,14 +257,15 @@ const ScrollableChat = ({
                         position: "absolute",
                         bottom: "32px",
                         right: "0",
-                        backgroundColor: "#FFFFFF",
+                        backgroundColor: isDark ? "#202C33" : "#FFFFFF",
                         borderRadius: "24px",
-                        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.18)",
+                        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.25)",
                         padding: "4px 8px",
                         display: "flex",
                         gap: "6px",
                         zIndex: 100,
                         whiteSpace: "nowrap",
+                        border: isDark ? "1px solid #2A3942" : "none",
                       }}
                     >
                       {QUICK_EMOJIS.map((emoji) => (
@@ -301,8 +312,14 @@ const ScrollableChat = ({
               >
                 <div
                   style={{
-                    backgroundColor: isMyMessage ? "#D9FDD3" : "#FFFFFF",
-                    color: "#111B21",
+                    backgroundColor: isMyMessage
+                      ? isDark
+                        ? "#005C4B"
+                        : "#D9FDD3"
+                      : isDark
+                      ? "#202C33"
+                      : "#FFFFFF",
+                    color: isDark ? "#E9EDEF" : "#111B21",
                     borderRadius: isMyMessage
                       ? isFirstInCluster
                         ? "16px 4px 16px 16px"
@@ -311,7 +328,9 @@ const ScrollableChat = ({
                       ? "4px 16px 16px 16px"
                       : "16px 16px 16px 4px",
                     padding: "6px 10px 5px 12px",
-                    boxShadow: "0 1px 1px rgba(11,20,26,.12)",
+                    boxShadow: isDark
+                      ? "0 1px 2px rgba(0,0,0,0.3)"
+                      : "0 1px 1px rgba(11,20,26,.12)",
                     wordBreak: "break-word",
                     fontSize: "14.5px",
                     lineHeight: "1.4",
@@ -327,7 +346,7 @@ const ScrollableChat = ({
                         style={{
                           fontSize: "12px",
                           fontWeight: "bold",
-                          color: "#128C7E",
+                          color: isDark ? "#25D366" : "#128C7E",
                           marginBottom: "3px",
                         }}
                       >
@@ -339,11 +358,13 @@ const ScrollableChat = ({
                   {m.replyTo && (
                     <div
                       style={{
-                        backgroundColor: isMyMessage
-                          ? "rgba(0, 0, 0, 0.06)"
+                        backgroundColor: isDark
+                          ? "rgba(255, 255, 255, 0.08)"
                           : "rgba(0, 0, 0, 0.04)",
                         borderLeft: isMyMessage
                           ? "3px solid #00A884"
+                          : isDark
+                          ? "3px solid #25D366"
                           : "3px solid #128C7E",
                         borderRadius: "6px",
                         padding: "3px 8px",
@@ -354,7 +375,13 @@ const ScrollableChat = ({
                       <div
                         style={{
                           fontWeight: "bold",
-                          color: isMyMessage ? "#00A884" : "#128C7E",
+                          color: isMyMessage
+                            ? isDark
+                              ? "#53BDEB"
+                              : "#00A884"
+                            : isDark
+                            ? "#25D366"
+                            : "#128C7E",
                           fontSize: "11px",
                         }}
                       >
@@ -362,7 +389,7 @@ const ScrollableChat = ({
                       </div>
                       <div
                         style={{
-                          color: "#4A5568",
+                          color: isDark ? "#E9EDEF" : "#4A5568",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
@@ -429,10 +456,12 @@ const ScrollableChat = ({
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        backgroundColor: isMyMessage
-                          ? "rgba(0, 0, 0, 0.05)"
-                          : "rgba(0, 0, 0, 0.03)",
-                        border: "1px solid rgba(0, 0, 0, 0.08)",
+                        backgroundColor: isDark
+                          ? "rgba(255, 255, 255, 0.06)"
+                          : "rgba(0, 0, 0, 0.04)",
+                        border: isDark
+                          ? "1px solid #2A3942"
+                          : "1px solid rgba(0, 0, 0, 0.08)",
                         borderRadius: "8px",
                         padding: "8px 10px",
                         marginBottom: "4px",
@@ -460,7 +489,7 @@ const ScrollableChat = ({
                           style={{
                             fontWeight: "600",
                             fontSize: "13.5px",
-                            color: "#111B21",
+                            color: isDark ? "#E9EDEF" : "#111B21",
                             whiteSpace: "nowrap",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
@@ -472,7 +501,7 @@ const ScrollableChat = ({
                         <div
                           style={{
                             fontSize: "11px",
-                            color: "#667781",
+                            color: isDark ? "#8696A0" : "#667781",
                             marginTop: "1px",
                           }}
                         >
@@ -485,15 +514,15 @@ const ScrollableChat = ({
                         rel="noopener noreferrer"
                         download={m.fileName || "document"}
                         style={{
-                          background: "#FFFFFF",
-                          border: "1px solid #E2E8F0",
+                          background: isDark ? "#2A3942" : "#FFFFFF",
+                          border: isDark ? "1px solid #374248" : "1px solid #E2E8F0",
                           borderRadius: "50%",
                           width: "30px",
                           height: "30px",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                           cursor: "pointer",
                           textDecoration: "none",
                           fontSize: "14px",
@@ -514,7 +543,7 @@ const ScrollableChat = ({
                         style={{
                           fontWeight: "bold",
                           fontSize: "15px",
-                          color: "#111B21",
+                          color: isDark ? "#E9EDEF" : "#111B21",
                           marginBottom: "4px",
                         }}
                       >
@@ -523,7 +552,7 @@ const ScrollableChat = ({
                       <div
                         style={{
                           fontSize: "11px",
-                          color: "#667781",
+                          color: isDark ? "#8696A0" : "#667781",
                           marginBottom: "8px",
                         }}
                       >
@@ -565,9 +594,15 @@ const ScrollableChat = ({
                               style={{
                                 border: isVoted
                                   ? "1.5px solid #00A884"
+                                  : isDark
+                                  ? "1px solid #374248"
                                   : "1px solid #E2E8F0",
                                 backgroundColor: isVoted
-                                  ? "#E7F8EF"
+                                  ? isDark
+                                    ? "rgba(0, 168, 132, 0.25)"
+                                    : "#E7F8EF"
+                                  : isDark
+                                  ? "rgba(255, 255, 255, 0.05)"
                                   : "rgba(0, 0, 0, 0.02)",
                                 borderRadius: "8px",
                                 padding: "7px 10px",
@@ -586,7 +621,11 @@ const ScrollableChat = ({
                                   bottom: 0,
                                   width: `${percentage}%`,
                                   backgroundColor: isVoted
-                                    ? "rgba(0, 168, 132, 0.15)"
+                                    ? isDark
+                                      ? "rgba(0, 168, 132, 0.35)"
+                                      : "rgba(0, 168, 132, 0.15)"
+                                    : isDark
+                                    ? "rgba(255, 255, 255, 0.08)"
                                     : "rgba(0, 0, 0, 0.04)",
                                   zIndex: 0,
                                   transition: "width 0.3s ease",
@@ -619,6 +658,8 @@ const ScrollableChat = ({
                                         : "50%",
                                       border: isVoted
                                         ? "2px solid #00A884"
+                                        : isDark
+                                        ? "2px solid #8696A0"
                                         : "2px solid #A0AEC0",
                                       backgroundColor: isVoted
                                         ? "#00A884"
@@ -636,7 +677,7 @@ const ScrollableChat = ({
                                   <span
                                     style={{
                                       fontWeight: isVoted ? "600" : "500",
-                                      color: "#111B21",
+                                      color: isDark ? "#E9EDEF" : "#111B21",
                                       fontSize: "13.5px",
                                     }}
                                   >
@@ -648,7 +689,11 @@ const ScrollableChat = ({
                                   style={{
                                     fontSize: "12px",
                                     fontWeight: "600",
-                                    color: isVoted ? "#00A884" : "#718096",
+                                    color: isVoted
+                                      ? "#00A884"
+                                      : isDark
+                                      ? "#8696A0"
+                                      : "#718096",
                                     display: "flex",
                                     alignItems: "center",
                                     gap: "4px",
@@ -670,7 +715,7 @@ const ScrollableChat = ({
                       <div
                         style={{
                           fontSize: "11px",
-                          color: "#718096",
+                          color: isDark ? "#8696A0" : "#718096",
                           marginTop: "6px",
                           textAlign: "right",
                         }}
@@ -690,7 +735,7 @@ const ScrollableChat = ({
                   <span
                     style={{
                       fontSize: "10.5px",
-                      color: "#667781",
+                      color: isDark ? "#8696A0" : "#667781",
                       marginLeft: "8px",
                       display: "inline-flex",
                       alignItems: "center",
@@ -735,16 +780,22 @@ const ScrollableChat = ({
                           alignItems: "center",
                           gap: "3px",
                           backgroundColor: data.reactedByMe
-                            ? "#E7F8EF"
+                            ? isDark
+                              ? "#005C4B"
+                              : "#E7F8EF"
+                            : isDark
+                            ? "#202C33"
                             : "#FFFFFF",
                           border: data.reactedByMe
                             ? "1px solid #25D366"
+                            : isDark
+                            ? "1px solid #2A3942"
                             : "1px solid #E2E8F0",
                           borderRadius: "12px",
                           padding: "1px 6px",
                           fontSize: "11.5px",
                           cursor: "pointer",
-                          boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                          boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
                           lineHeight: "1.4",
                           transition: "all 0.15s ease",
                         }}
@@ -754,7 +805,13 @@ const ScrollableChat = ({
                           style={{
                             fontWeight: 600,
                             fontSize: "11px",
-                            color: data.reactedByMe ? "#075E54" : "#4A5568",
+                            color: data.reactedByMe
+                              ? isDark
+                                ? "#E9EDEF"
+                                : "#075E54"
+                              : isDark
+                              ? "#8696A0"
+                              : "#4A5568",
                           }}
                         >
                           {data.count}
@@ -787,7 +844,9 @@ const ScrollableChat = ({
                     }
                     title="Add reaction"
                     style={{
-                      background: "rgba(255, 255, 255, 0.85)",
+                      background: isDark
+                        ? "rgba(32, 44, 51, 0.9)"
+                        : "rgba(255, 255, 255, 0.9)",
                       border: "none",
                       borderRadius: "50%",
                       width: "26px",
@@ -797,7 +856,7 @@ const ScrollableChat = ({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
                     }}
                   >
                     😊
@@ -809,7 +868,9 @@ const ScrollableChat = ({
                     onClick={() => onReply && onReply(m)}
                     title="Reply to message"
                     style={{
-                      background: "rgba(255, 255, 255, 0.85)",
+                      background: isDark
+                        ? "rgba(32, 44, 51, 0.9)"
+                        : "rgba(255, 255, 255, 0.9)",
                       border: "none",
                       borderRadius: "50%",
                       width: "26px",
@@ -819,7 +880,7 @@ const ScrollableChat = ({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
                     }}
                   >
                     ↩️
@@ -831,7 +892,9 @@ const ScrollableChat = ({
                     onClick={() => onDelete && onDelete(m._id)}
                     title="Delete message"
                     style={{
-                      background: "rgba(255, 255, 255, 0.85)",
+                      background: isDark
+                        ? "rgba(32, 44, 51, 0.9)"
+                        : "rgba(255, 255, 255, 0.9)",
                       border: "none",
                       borderRadius: "50%",
                       width: "26px",
@@ -841,7 +904,7 @@ const ScrollableChat = ({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
                       color: "#E53E3E",
                     }}
                   >
@@ -856,14 +919,15 @@ const ScrollableChat = ({
                         position: "absolute",
                         bottom: "32px",
                         left: "0",
-                        backgroundColor: "#FFFFFF",
+                        backgroundColor: isDark ? "#202C33" : "#FFFFFF",
                         borderRadius: "24px",
-                        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.18)",
+                        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.25)",
                         padding: "4px 8px",
                         display: "flex",
                         gap: "6px",
                         zIndex: 100,
                         whiteSpace: "nowrap",
+                        border: isDark ? "1px solid #2A3942" : "none",
                       }}
                     >
                       {QUICK_EMOJIS.map((emoji) => (

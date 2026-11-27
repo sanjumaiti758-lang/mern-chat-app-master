@@ -32,7 +32,7 @@ const messageSchema = mongoose.Schema(
       },
     ],
   },
-  { timestamps: true }
+  { timestamps: true, versionKey: false }
 );
 
 const Message = mongoose.model("Message", messageSchema);

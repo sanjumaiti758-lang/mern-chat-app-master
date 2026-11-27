@@ -17,7 +17,13 @@ import {
   DrawerOverlay,
 } from "@chakra-ui/modal";
 import { Tooltip } from "@chakra-ui/tooltip";
-import { BellIcon, ChevronDownIcon } from "@chakra-ui/icons";
+import {
+  BellIcon,
+  ChevronDownIcon,
+  MoonIcon,
+  SunIcon,
+  SettingsIcon,
+} from "@chakra-ui/icons";
 import { Avatar } from "@chakra-ui/avatar";
 import { useHistory } from "react-router-dom";
 import { useState } from "react";
@@ -25,7 +31,9 @@ import axios from "axios";
 import { useToast } from "@chakra-ui/toast";
 import ChatLoading from "../ChatLoading";
 import { Spinner } from "@chakra-ui/spinner";
+import { IconButton, useColorMode } from "@chakra-ui/react";
 import ProfileModal from "./ProfileModal";
+import ThemeModal from "./ThemeModal";
 import NotificationBadge from "react-notification-badge";
 import { Effect } from "react-notification-badge";
 import { getSender } from "../../config/ChatLogics";
@@ -45,11 +53,20 @@ function SideDrawer() {
     setNotification,
     chats,
     setChats,
+    themeMode,
   } = ChatState();
 
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const {
+    isOpen: isThemeOpen,
+    onOpen: onThemeOpen,
+    onClose: onThemeClose,
+  } = useDisclosure();
+
   const history = useHistory();
+  const { colorMode } = useColorMode();
+  const isDark = colorMode === "dark";
 
   const logoutHandler = () => {
     localStorage.removeItem("userInfo");
@@ -94,8 +111,6 @@ function SideDrawer() {
   };
 
   const accessChat = async (userId) => {
-    console.log(userId);
-
     try {
       setLoadingChat(true);
       const config = {
@@ -128,36 +143,76 @@ function SideDrawer() {
         d="flex"
         justifyContent="space-between"
         alignItems="center"
-        bg="white"
+        bg={isDark ? "#202C33" : "white"}
+        color={isDark ? "#E9EDEF" : "black"}
         w="100%"
-        p="5px 10px 5px 10px"
-        borderWidth="5px"
+        p="6px 14px"
+        borderBottom="1px solid"
+        borderColor={isDark ? "#2A3942" : "#E2E8F0"}
       >
         <Tooltip label="Search Users to chat" hasArrow placement="bottom-end">
-          <Button variant="ghost" onClick={onOpen}>
+          <Button
+            variant="ghost"
+            onClick={onOpen}
+            colorScheme={isDark ? "whiteAlpha" : "gray"}
+          >
             <i className="fas fa-search"></i>
             <Text d={{ base: "none", md: "flex" }} px={4}>
               Search User
             </Text>
           </Button>
         </Tooltip>
-        <Text fontSize="2xl" fontFamily="Work sans">
+
+        <Text
+          fontSize="2xl"
+          fontFamily="Work sans"
+          fontWeight="bold"
+          letterSpacing="wide"
+          color="#00A884"
+        >
           Talk-A-Tive
         </Text>
-        <div>
+
+        <Box d="flex" alignItems="center" gap={2}>
+          {/* Theme Settings Icon Button */}
+          <Tooltip label="Theme (Light / Dark / System)" hasArrow>
+            <IconButton
+              aria-label="Theme settings"
+              variant="ghost"
+              fontSize="lg"
+              icon={
+                themeMode === "dark" ? (
+                  <MoonIcon />
+                ) : themeMode === "light" ? (
+                  <SunIcon />
+                ) : (
+                  <SettingsIcon />
+                )
+              }
+              onClick={onThemeOpen}
+            />
+          </Tooltip>
+
+          {/* Notifications Menu */}
           <Menu>
-            <MenuButton p={1}>
+            <MenuButton p={1} position="relative">
               <NotificationBadge
                 count={notification.length}
                 effect={Effect.SCALE}
               />
               <BellIcon fontSize="2xl" m={1} />
             </MenuButton>
-            <MenuList pl={2}>
+            <MenuList
+              pl={2}
+              bg={isDark ? "#202C33" : "white"}
+              color={isDark ? "#E9EDEF" : "black"}
+              borderColor={isDark ? "#2A3942" : "#E2E8F0"}
+            >
               {!notification.length && "No New Messages"}
               {notification.map((notif) => (
                 <MenuItem
                   key={notif._id}
+                  _hover={{ bg: isDark ? "#2A3942" : "#F0F2F5" }}
                   onClick={() => {
                     setSelectedChat(notif.chat);
                     setNotification(notification.filter((n) => n !== notif));
@@ -170,8 +225,16 @@ function SideDrawer() {
               ))}
             </MenuList>
           </Menu>
+
+          {/* User Profile Avatar Menu */}
           <Menu>
-            <MenuButton as={Button} bg="white" rightIcon={<ChevronDownIcon />}>
+            <MenuButton
+              as={Button}
+              bg={isDark ? "#202C33" : "white"}
+              _hover={{ bg: isDark ? "#2A3942" : "#F0F2F5" }}
+              rightIcon={<ChevronDownIcon />}
+              p={1}
+            >
               <Avatar
                 size="sm"
                 cursor="pointer"
@@ -179,21 +242,49 @@ function SideDrawer() {
                 src={user.pic}
               />
             </MenuButton>
-            <MenuList>
+            <MenuList
+              bg={isDark ? "#202C33" : "white"}
+              color={isDark ? "#E9EDEF" : "black"}
+              borderColor={isDark ? "#2A3942" : "#E2E8F0"}
+              boxShadow="0 4px 16px rgba(0,0,0,0.2)"
+            >
               <ProfileModal user={user}>
-                <MenuItem>My Profile</MenuItem>{" "}
+                <MenuItem _hover={{ bg: isDark ? "#2A3942" : "#F0F2F5" }}>
+                  👤 My Profile & About
+                </MenuItem>
               </ProfileModal>
-              <MenuDivider />
-              <MenuItem onClick={logoutHandler}>Logout</MenuItem>
+              <MenuItem
+                _hover={{ bg: isDark ? "#2A3942" : "#F0F2F5" }}
+                onClick={onThemeOpen}
+              >
+                🌓 Theme (Light / Dark / System)
+              </MenuItem>
+              <MenuDivider borderColor={isDark ? "#2A3942" : "#E2E8F0"} />
+              <MenuItem
+                _hover={{ bg: isDark ? "#2A3942" : "#F0F2F5" }}
+                onClick={logoutHandler}
+                color="red.400"
+              >
+                🚪 Logout
+              </MenuItem>
             </MenuList>
           </Menu>
-        </div>
+        </Box>
       </Box>
 
+      {/* Search Drawer */}
       <Drawer placement="left" onClose={onClose} isOpen={isOpen}>
         <DrawerOverlay />
-        <DrawerContent>
-          <DrawerHeader borderBottomWidth="1px">Search Users</DrawerHeader>
+        <DrawerContent
+          bg={isDark ? "#111B21" : "white"}
+          color={isDark ? "#E9EDEF" : "black"}
+        >
+          <DrawerHeader
+            borderBottomWidth="1px"
+            borderColor={isDark ? "#2A3942" : "#E2E8F0"}
+          >
+            Search Users
+          </DrawerHeader>
           <DrawerBody>
             <Box d="flex" pb={2}>
               <Input
@@ -202,8 +293,12 @@ function SideDrawer() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                focusBorderColor="#00A884"
+                bg={isDark ? "#202C33" : "white"}
               />
-              <Button onClick={handleSearch}>Go</Button>
+              <Button colorScheme="whatsapp" bg="#00A884" onClick={handleSearch}>
+                Go
+              </Button>
             </Box>
             {loading ? (
               <ChatLoading />
@@ -212,11 +307,11 @@ function SideDrawer() {
                 No user found
               </Text>
             ) : (
-              searchResult?.map((user) => (
+              searchResult?.map((u) => (
                 <UserListItem
-                  key={user._id}
-                  user={user}
-                  handleFunction={() => accessChat(user._id)}
+                  key={u._id}
+                  user={u}
+                  handleFunction={() => accessChat(u._id)}
                 />
               ))
             )}
@@ -224,6 +319,9 @@ function SideDrawer() {
           </DrawerBody>
         </DrawerContent>
       </Drawer>
+
+      {/* Theme Selection Modal */}
+      <ThemeModal isOpen={isThemeOpen} onClose={onThemeClose} />
     </>
   );
 }

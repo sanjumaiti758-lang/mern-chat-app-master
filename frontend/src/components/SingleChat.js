@@ -22,6 +22,7 @@ import {
   Checkbox,
   VStack,
   HStack,
+  useColorMode,
 } from "@chakra-ui/react";
 import { getSender, getSenderFull } from "../config/ChatLogics";
 import { useEffect, useState, useRef } from "react";
@@ -67,6 +68,8 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const docInputRef = useRef(null);
 
   const toast = useToast();
+  const { colorMode } = useColorMode();
+  const isDark = colorMode === "dark";
 
   const defaultOptions = {
     loop: true,
@@ -285,7 +288,6 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
         throw new Error("Failed to upload document");
       }
 
-      // Format file size
       let sizeStr = "";
       if (file.size < 1024 * 1024) {
         sizeStr = `${Math.round(file.size / 1024)} KB`;
@@ -529,7 +531,6 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
         position: "bottom-right",
       });
     } catch (error) {
-      // If already deleted from server or 404, don't show error toast
       if (error.response?.status !== 404) {
         toast({
           title: "Error Occured!",
@@ -636,11 +637,13 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       {selectedChat ? (
         <>
           <Text
-            fontSize={{ base: "28px", md: "30px" }}
+            fontSize={{ base: "26px", md: "28px" }}
             pb={3}
             px={2}
             w="100%"
             fontFamily="Work sans"
+            fontWeight="600"
+            color={isDark ? "#E9EDEF" : "#111B21"}
             d="flex"
             justifyContent={{ base: "space-between" }}
             alignItems="center"
@@ -674,11 +677,12 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
             flexDir="column"
             justifyContent="flex-end"
             p={3}
-            bg="#EFEAE2"
+            bg={isDark ? "#0B141A" : "#EFEAE2"}
             w="100%"
             h="100%"
             borderRadius="lg"
             overflowY="hidden"
+            transition="background-color 0.2s ease"
           >
             {loading ? (
               <Spinner
@@ -687,6 +691,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                 h={20}
                 alignSelf="center"
                 margin="auto"
+                color="#00A884"
               />
             ) : (
               <div className="messages">
@@ -703,13 +708,14 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
             {/* Replying Banner */}
             {replyingTo && (
               <Box
-                bg="#FFFFFF"
+                bg={isDark ? "#202C33" : "#FFFFFF"}
+                color={isDark ? "#E9EDEF" : "#111B21"}
                 p={2}
                 px={3}
                 mt={2}
                 borderRadius="md"
                 borderLeft="4px solid #00A884"
-                boxShadow="0 1px 3px rgba(0,0,0,0.1)"
+                boxShadow="0 1px 3px rgba(0,0,0,0.2)"
                 d="flex"
                 justifyContent="space-between"
                 alignItems="center"
@@ -720,7 +726,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                   </Text>
                   <Text
                     fontSize="sm"
-                    color="gray.600"
+                    color={isDark ? "#8696A0" : "gray.600"}
                     isTruncated
                     maxW={{ base: "220px", md: "500px" }}
                   >
@@ -783,9 +789,9 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                     as={IconButton}
                     aria-label="Attach file or poll"
                     title="Attach file or poll"
-                    bg="#FFFFFF"
-                    _hover={{ bg: "#F0F2F5" }}
-                    color="gray.600"
+                    bg={isDark ? "#2A3942" : "#FFFFFF"}
+                    _hover={{ bg: isDark ? "#374248" : "#F0F2F5" }}
+                    color={isDark ? "#A0AEC0" : "gray.600"}
                     borderRadius="full"
                     isLoading={mediaLoading}
                     icon={
@@ -807,10 +813,14 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                     p={2}
                     minW="200px"
                     borderRadius="14px"
-                    boxShadow="0 6px 20px rgba(0,0,0,0.15)"
+                    bg={isDark ? "#202C33" : "#FFFFFF"}
+                    color={isDark ? "#E9EDEF" : "#111B21"}
+                    borderColor={isDark ? "#2A3942" : "#E2E8F0"}
+                    boxShadow="0 6px 20px rgba(0,0,0,0.25)"
                   >
                     <MenuItem
                       icon={<span style={{ fontSize: "18px" }}>📷</span>}
+                      _hover={{ bg: isDark ? "#2A3942" : "#F0F2F5" }}
                       onClick={() =>
                         mediaInputRef.current && mediaInputRef.current.click()
                       }
@@ -821,6 +831,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                     </MenuItem>
                     <MenuItem
                       icon={<span style={{ fontSize: "18px" }}>📄</span>}
+                      _hover={{ bg: isDark ? "#2A3942" : "#F0F2F5" }}
                       onClick={() =>
                         docInputRef.current && docInputRef.current.click()
                       }
@@ -831,6 +842,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                     </MenuItem>
                     <MenuItem
                       icon={<span style={{ fontSize: "18px" }}>📊</span>}
+                      _hover={{ bg: isDark ? "#2A3942" : "#F0F2F5" }}
                       onClick={onPollOpen}
                       fontWeight="500"
                       py={2}
@@ -842,8 +854,14 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
 
                 <Input
                   variant="filled"
-                  bg="#FFFFFF"
-                  _focus={{ bg: "#FFFFFF", borderColor: "#00A884" }}
+                  bg={isDark ? "#2A3942" : "#FFFFFF"}
+                  _hover={{ bg: isDark ? "#323F46" : "#FFFFFF" }}
+                  _focus={{
+                    bg: isDark ? "#2A3942" : "#FFFFFF",
+                    borderColor: "#00A884",
+                  }}
+                  color={isDark ? "#E9EDEF" : "#111B21"}
+                  _placeholder={{ color: isDark ? "#8696A0" : "gray.500" }}
                   borderRadius="24px"
                   placeholder={
                     replyingTo ? "Type your reply..." : "Type a message..."
@@ -885,7 +903,11 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
           {/* Poll Creation Modal */}
           <Modal isOpen={isPollOpen} onClose={onPollClose} isCentered size="md">
             <ModalOverlay />
-            <ModalContent borderRadius="16px">
+            <ModalContent
+              borderRadius="16px"
+              bg={isDark ? "#202C33" : "#FFFFFF"}
+              color={isDark ? "#E9EDEF" : "#111B21"}
+            >
               <ModalHeader fontSize="20px" fontWeight="bold">
                 Create a Poll 📊
               </ModalHeader>
@@ -901,6 +923,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                       value={pollQuestion}
                       onChange={(e) => setPollQuestion(e.target.value)}
                       focusBorderColor="#00A884"
+                      bg={isDark ? "#111B21" : "#FFFFFF"}
                     />
                   </Box>
 
@@ -918,6 +941,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                               handlePollOptionChange(e.target.value, idx)
                             }
                             focusBorderColor="#00A884"
+                            bg={isDark ? "#111B21" : "#FFFFFF"}
                           />
                           {pollOptions.length > 2 && (
                             <IconButton
@@ -977,7 +1001,12 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
         </>
       ) : (
         <Box d="flex" alignItems="center" justifyContent="center" h="100%">
-          <Text fontSize="3xl" pb={3} fontFamily="Work sans">
+          <Text
+            fontSize="3xl"
+            pb={3}
+            fontFamily="Work sans"
+            color={isDark ? "#8696A0" : "gray.600"}
+          >
             Click on a user to start chatting
           </Text>
         </Box>

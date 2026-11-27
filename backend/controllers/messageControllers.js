@@ -10,7 +10,7 @@ const Chat = require("../models/chatModel");
 const allMessages = asyncHandler(async (req, res) => {
   try {
     const messages = await Message.find({ chat: req.params.chatId })
-      .populate("sender", "name pic email")
+      .populate("sender", "name pic email about")
       .populate("chat")
       .populate("reactions.user", "name pic")
       .populate("poll.options.votes", "name pic")
@@ -76,7 +76,7 @@ const sendMessage = asyncHandler(async (req, res) => {
   try {
     var message = await Message.create(newMessage);
 
-    message = await message.populate("sender", "name pic");
+    message = await message.populate("sender", "name pic email about");
     message = await message.populate("chat");
     message = await message.populate("poll.options.votes", "name pic");
     message = await message.populate({
@@ -85,7 +85,7 @@ const sendMessage = asyncHandler(async (req, res) => {
     });
     message = await User.populate(message, {
       path: "chat.users",
-      select: "name pic email",
+      select: "name pic email about",
     });
 
     await Chat.findByIdAndUpdate(targetChatId, { latestMessage: message });
@@ -142,7 +142,12 @@ const votePoll = asyncHandler(async (req, res) => {
   }
 
   const userIdStr = req.user._id.toString();
-  const options = message.poll.options;
+  // Clone options array cleanly
+  const options = message.poll.options.map((opt) => ({
+    text: opt.text,
+    votes: Array.isArray(opt.votes) ? [...opt.votes] : [],
+  }));
+
   const targetOption = options[optionIndex];
 
   if (!targetOption) {
@@ -151,29 +156,36 @@ const votePoll = asyncHandler(async (req, res) => {
   }
 
   const hasVotedForThis = targetOption.votes.some(
-    (v) => v.toString() === userIdStr
+    (v) => (v._id ? v._id.toString() : v.toString()) === userIdStr
   );
 
   if (hasVotedForThis) {
     // Toggle off (unvote)
     targetOption.votes = targetOption.votes.filter(
-      (v) => v.toString() !== userIdStr
+      (v) => (v._id ? v._id.toString() : v.toString()) !== userIdStr
     );
   } else {
     if (!message.poll.allowMultipleAnswers) {
       // Single answer allowed: remove vote from all other options first
       options.forEach((opt) => {
-        opt.votes = opt.votes.filter((v) => v.toString() !== userIdStr);
+        opt.votes = opt.votes.filter(
+          (v) => (v._id ? v._id.toString() : v.toString()) !== userIdStr
+        );
       });
     }
     // Add vote to target option
     targetOption.votes.push(req.user._id);
   }
 
-  await message.save();
+  // Atomic update to avoid Mongoose VersionError
+  await Message.findByIdAndUpdate(
+    messageId,
+    { $set: { "poll.options": options } },
+    { new: true }
+  );
 
   let updatedMessage = await Message.findById(messageId)
-    .populate("sender", "name pic email")
+    .populate("sender", "name pic email about")
     .populate("chat")
     .populate("reactions.user", "name pic")
     .populate("poll.options.votes", "name pic")
@@ -184,7 +196,7 @@ const votePoll = asyncHandler(async (req, res) => {
 
   updatedMessage = await User.populate(updatedMessage, {
     path: "chat.users",
-    select: "name pic email",
+    select: "name pic email about",
   });
 
   res.json(updatedMessage);
@@ -207,32 +219,34 @@ const toggleReaction = asyncHandler(async (req, res) => {
     throw new Error("Message not found");
   }
 
-  if (!message.reactions) {
-    message.reactions = [];
-  }
-
+  const reactions = Array.isArray(message.reactions) ? [...message.reactions] : [];
   const currentUserIdStr = req.user._id.toString();
-  const existingReactionIndex = message.reactions.findIndex(
-    (r) => r.user && r.user.toString() === currentUserIdStr
+  const existingReactionIndex = reactions.findIndex(
+    (r) => r.user && (r.user._id ? r.user._id.toString() : r.user.toString()) === currentUserIdStr
   );
 
   if (existingReactionIndex > -1) {
-    if (message.reactions[existingReactionIndex].emoji === emoji) {
+    if (reactions[existingReactionIndex].emoji === emoji) {
       // Toggle off when clicking same emoji
-      message.reactions.splice(existingReactionIndex, 1);
+      reactions.splice(existingReactionIndex, 1);
     } else {
       // Switch emoji
-      message.reactions[existingReactionIndex].emoji = emoji;
+      reactions[existingReactionIndex].emoji = emoji;
     }
   } else {
     // Add new reaction
-    message.reactions.push({ emoji, user: req.user._id });
+    reactions.push({ emoji, user: req.user._id });
   }
 
-  await message.save();
+  // Atomic update to prevent VersionError
+  await Message.findByIdAndUpdate(
+    messageId,
+    { $set: { reactions: reactions } },
+    { new: true }
+  );
 
   let updatedMessage = await Message.findById(messageId)
-    .populate("sender", "name pic email")
+    .populate("sender", "name pic email about")
     .populate("chat")
     .populate("reactions.user", "name pic")
     .populate("poll.options.votes", "name pic")
@@ -243,7 +257,7 @@ const toggleReaction = asyncHandler(async (req, res) => {
 
   updatedMessage = await User.populate(updatedMessage, {
     path: "chat.users",
-    select: "name pic email",
+    select: "name pic email about",
   });
 
   res.json(updatedMessage);
