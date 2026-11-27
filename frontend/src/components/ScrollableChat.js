@@ -6,7 +6,13 @@ import { ChatState } from "../Context/ChatProvider";
 
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
-const ScrollableChat = ({ messages, onReaction, onReply, onDelete }) => {
+const ScrollableChat = ({
+  messages,
+  onReaction,
+  onReply,
+  onDelete,
+  onVotePoll,
+}) => {
   const { user, selectedChat } = ChatState();
   const [activePickerId, setActivePickerId] = useState(null);
   const [hoveredMessageId, setHoveredMessageId] = useState(null);
@@ -53,7 +59,7 @@ const ScrollableChat = ({ messages, onReaction, onReply, onDelete }) => {
           const senderPic =
             m.sender && typeof m.sender === "object" ? m.sender.pic : "";
 
-          // Group reactions by emoji: { "👍": { count: 2, reactedByMe: true }, ... }
+          // Group reactions by emoji
           const reactionGroups = {};
           if (Array.isArray(m.reactions)) {
             m.reactions.forEach((r) => {
@@ -77,16 +83,30 @@ const ScrollableChat = ({ messages, onReaction, onReply, onDelete }) => {
           const isImage =
             m.mediaType === "image" ||
             (m.mediaUrl &&
-              (m.mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)/i) ||
-                m.mediaType !== "video"));
+              m.mediaType !== "video" &&
+              m.mediaType !== "document" &&
+              m.mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)/i));
+
           const isVideo =
             m.mediaType === "video" ||
             (m.mediaUrl && m.mediaUrl.match(/\.(mp4|webm|mov|ogg)/i));
 
+          const isDocument = m.mediaType === "document";
+          const isPoll = m.poll && m.poll.question && Array.isArray(m.poll.options);
+
+          // Calculate total poll votes
+          const totalPollVotes = isPoll
+            ? m.poll.options.reduce(
+                (sum, opt) => sum + (opt.votes ? opt.votes.length : 0),
+                0
+              )
+            : 0;
+
           const showCaption =
             m.content &&
             m.content !== "📷 Photo" &&
-            m.content !== "🎥 Video";
+            m.content !== "🎥 Video" &&
+            !m.content.startsWith("📊 Poll:");
 
           return (
             <div
@@ -276,7 +296,7 @@ const ScrollableChat = ({ messages, onReaction, onReply, onDelete }) => {
                   display: "flex",
                   flexDirection: "column",
                   alignItems: isMyMessage ? "flex-end" : "flex-start",
-                  maxWidth: "75%",
+                  maxWidth: isPoll ? "85%" : "75%",
                 }}
               >
                 <div
@@ -296,6 +316,7 @@ const ScrollableChat = ({ messages, onReaction, onReply, onDelete }) => {
                     fontSize: "14.5px",
                     lineHeight: "1.4",
                     position: "relative",
+                    minWidth: isPoll ? "260px" : isDocument ? "240px" : "60px",
                   }}
                 >
                   {/* Sender name for group chats on incoming messages */}
@@ -352,19 +373,24 @@ const ScrollableChat = ({ messages, onReaction, onReply, onDelete }) => {
                         {m.replyTo.mediaUrl
                           ? m.replyTo.mediaType === "video"
                             ? "🎥 Video"
+                            : m.replyTo.mediaType === "document"
+                            ? `📄 ${m.replyTo.fileName || "Document"}`
                             : "📷 Photo"
                           : m.replyTo.content}
                       </div>
                     </div>
                   )}
 
-                  {/* Photo Media */}
+                  {/* 1. Photo Media */}
                   {m.mediaUrl && isImage && (
                     <a
                       href={m.mediaUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ display: "block", marginBottom: showCaption ? "4px" : "2px" }}
+                      style={{
+                        display: "block",
+                        marginBottom: showCaption ? "4px" : "2px",
+                      }}
                     >
                       <img
                         src={m.mediaUrl}
@@ -381,7 +407,7 @@ const ScrollableChat = ({ messages, onReaction, onReply, onDelete }) => {
                     </a>
                   )}
 
-                  {/* Video Media */}
+                  {/* 2. Video Media */}
                   {m.mediaUrl && isVideo && (
                     <div style={{ marginBottom: showCaption ? "4px" : "2px" }}>
                       <video
@@ -397,8 +423,266 @@ const ScrollableChat = ({ messages, onReaction, onReply, onDelete }) => {
                     </div>
                   )}
 
+                  {/* 3. Document Media */}
+                  {isDocument && (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        backgroundColor: isMyMessage
+                          ? "rgba(0, 0, 0, 0.05)"
+                          : "rgba(0, 0, 0, 0.03)",
+                        border: "1px solid rgba(0, 0, 0, 0.08)",
+                        borderRadius: "8px",
+                        padding: "8px 10px",
+                        marginBottom: "4px",
+                        gap: "10px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "36px",
+                          height: "40px",
+                          borderRadius: "6px",
+                          backgroundColor: "#E53E3E",
+                          color: "white",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "18px",
+                          flexShrink: 0,
+                        }}
+                      >
+                        📄
+                      </div>
+                      <div style={{ overflow: "hidden", flex: 1 }}>
+                        <div
+                          style={{
+                            fontWeight: "600",
+                            fontSize: "13.5px",
+                            color: "#111B21",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                          title={m.fileName || m.content}
+                        >
+                          {m.fileName || m.content}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "11px",
+                            color: "#667781",
+                            marginTop: "1px",
+                          }}
+                        >
+                          {m.fileSize ? `Document • ${m.fileSize}` : "Document"}
+                        </div>
+                      </div>
+                      <a
+                        href={m.mediaUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download={m.fileName || "document"}
+                        style={{
+                          background: "#FFFFFF",
+                          border: "1px solid #E2E8F0",
+                          borderRadius: "50%",
+                          width: "30px",
+                          height: "30px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                          cursor: "pointer",
+                          textDecoration: "none",
+                          fontSize: "14px",
+                          color: "#00A884",
+                          flexShrink: 0,
+                        }}
+                        title="Download Document"
+                      >
+                        ⬇️
+                      </a>
+                    </div>
+                  )}
+
+                  {/* 4. Poll Card */}
+                  {isPoll && (
+                    <div style={{ marginBottom: "6px", width: "100%" }}>
+                      <div
+                        style={{
+                          fontWeight: "bold",
+                          fontSize: "15px",
+                          color: "#111B21",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        {m.poll.question}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          color: "#667781",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        {m.poll.allowMultipleAnswers
+                          ? "Select one or more"
+                          : "Select one"}
+                      </div>
+
+                      {/* Poll Options */}
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "6px",
+                        }}
+                      >
+                        {m.poll.options.map((opt, optIdx) => {
+                          const votes = Array.isArray(opt.votes)
+                            ? opt.votes
+                            : [];
+                          const isVoted = votes.some((v) => {
+                            const vId = typeof v === "object" ? v._id : v;
+                            return String(vId) === String(currentUserId);
+                          });
+
+                          const percentage =
+                            totalPollVotes > 0
+                              ? Math.round(
+                                  (votes.length / totalPollVotes) * 100
+                                )
+                              : 0;
+
+                          return (
+                            <div
+                              key={optIdx}
+                              onClick={() =>
+                                onVotePoll && onVotePoll(m._id, optIdx)
+                              }
+                              style={{
+                                border: isVoted
+                                  ? "1.5px solid #00A884"
+                                  : "1px solid #E2E8F0",
+                                backgroundColor: isVoted
+                                  ? "#E7F8EF"
+                                  : "rgba(0, 0, 0, 0.02)",
+                                borderRadius: "8px",
+                                padding: "7px 10px",
+                                cursor: "pointer",
+                                transition: "all 0.15s ease",
+                                position: "relative",
+                                overflow: "hidden",
+                              }}
+                            >
+                              {/* Background vote progress bar */}
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  top: 0,
+                                  left: 0,
+                                  bottom: 0,
+                                  width: `${percentage}%`,
+                                  backgroundColor: isVoted
+                                    ? "rgba(0, 168, 132, 0.15)"
+                                    : "rgba(0, 0, 0, 0.04)",
+                                  zIndex: 0,
+                                  transition: "width 0.3s ease",
+                                }}
+                              />
+
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  position: "relative",
+                                  zIndex: 1,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "8px",
+                                  }}
+                                >
+                                  {/* Radio / Check indicator */}
+                                  <span
+                                    style={{
+                                      width: "16px",
+                                      height: "16px",
+                                      borderRadius: m.poll.allowMultipleAnswers
+                                        ? "3px"
+                                        : "50%",
+                                      border: isVoted
+                                        ? "2px solid #00A884"
+                                        : "2px solid #A0AEC0",
+                                      backgroundColor: isVoted
+                                        ? "#00A884"
+                                        : "transparent",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      color: "white",
+                                      fontSize: "10px",
+                                      fontWeight: "bold",
+                                    }}
+                                  >
+                                    {isVoted && "✓"}
+                                  </span>
+                                  <span
+                                    style={{
+                                      fontWeight: isVoted ? "600" : "500",
+                                      color: "#111B21",
+                                      fontSize: "13.5px",
+                                    }}
+                                  >
+                                    {opt.text}
+                                  </span>
+                                </div>
+
+                                <div
+                                  style={{
+                                    fontSize: "12px",
+                                    fontWeight: "600",
+                                    color: isVoted ? "#00A884" : "#718096",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                  }}
+                                >
+                                  {votes.length > 0 && (
+                                    <span>{percentage}%</span>
+                                  )}
+                                  <span style={{ fontSize: "11px" }}>
+                                    ({votes.length})
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          color: "#718096",
+                          marginTop: "6px",
+                          textAlign: "right",
+                        }}
+                      >
+                        {totalPollVotes}{" "}
+                        {totalPollVotes === 1 ? "vote" : "votes"}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Text Message Content */}
-                  {(!m.mediaUrl || showCaption) && (
+                  {!isPoll && (!m.mediaUrl || showCaption) && (
                     <span style={{ marginRight: "4px" }}>{m.content}</span>
                   )}
 

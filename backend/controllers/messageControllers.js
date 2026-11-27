@@ -1,4 +1,5 @@
 const asyncHandler = require("express-async-handler");
+const mongoose = require("mongoose");
 const Message = require("../models/messageModel");
 const User = require("../models/userModel");
 const Chat = require("../models/chatModel");
@@ -12,6 +13,7 @@ const allMessages = asyncHandler(async (req, res) => {
       .populate("sender", "name pic email")
       .populate("chat")
       .populate("reactions.user", "name pic")
+      .populate("poll.options.votes", "name pic")
       .populate({
         path: "replyTo",
         populate: { path: "sender", select: "name pic" },
@@ -27,9 +29,18 @@ const allMessages = asyncHandler(async (req, res) => {
 //@route           POST /api/Message/
 //@access          Protected
 const sendMessage = asyncHandler(async (req, res) => {
-  const { content, chatId, replyTo, mediaUrl, mediaType } = req.body;
+  const {
+    content,
+    chatId,
+    replyTo,
+    mediaUrl,
+    mediaType,
+    fileName,
+    fileSize,
+    poll,
+  } = req.body;
 
-  if ((!content && !mediaUrl) || !chatId) {
+  if ((!content && !mediaUrl && !poll) || !chatId) {
     console.log("Invalid data passed into request");
     return res.sendStatus(400);
   }
@@ -37,13 +48,28 @@ const sendMessage = asyncHandler(async (req, res) => {
   const targetChatId =
     typeof chatId === "object" && chatId._id ? chatId._id : chatId;
 
+  var formattedPoll = undefined;
+  if (poll && poll.question && Array.isArray(poll.options)) {
+    formattedPoll = {
+      question: poll.question.trim(),
+      options: poll.options
+        .map((opt) => (typeof opt === "string" ? opt.trim() : opt.text?.trim()))
+        .filter(Boolean)
+        .map((text) => ({ text, votes: [] })),
+      allowMultipleAnswers: !!poll.allowMultipleAnswers,
+    };
+  }
+
   var newMessage = {
     sender: req.user._id,
-    content: content || "",
+    content: content || (formattedPoll ? `📊 Poll: ${formattedPoll.question}` : ""),
     chat: targetChatId,
     replyTo: replyTo || null,
     mediaUrl: mediaUrl || "",
     mediaType: mediaType || "",
+    fileName: fileName || "",
+    fileSize: fileSize || "",
+    poll: formattedPoll,
     reactions: [],
   };
 
@@ -52,6 +78,7 @@ const sendMessage = asyncHandler(async (req, res) => {
 
     message = await message.populate("sender", "name pic");
     message = await message.populate("chat");
+    message = await message.populate("poll.options.votes", "name pic");
     message = await message.populate({
       path: "replyTo",
       populate: { path: "sender", select: "name pic" },
@@ -77,10 +104,14 @@ const sendMessage = asyncHandler(async (req, res) => {
 const deleteMessage = asyncHandler(async (req, res) => {
   const { messageId } = req.params;
 
+  if (!messageId || !mongoose.Types.ObjectId.isValid(messageId)) {
+    return res.json({ message: "Message deleted successfully", messageId });
+  }
+
   const message = await Message.findById(messageId);
   if (!message) {
-    res.status(404);
-    throw new Error("Message not found");
+    // If message is already deleted or not in DB, return success so frontend clears cleanly
+    return res.json({ message: "Message deleted successfully", messageId });
   }
 
   const chatId = message.chat;
@@ -91,6 +122,72 @@ const deleteMessage = asyncHandler(async (req, res) => {
   await Chat.findByIdAndUpdate(chatId, { latestMessage: latest || null });
 
   res.json({ message: "Message deleted successfully", messageId, chatId });
+});
+
+//@description     Vote on a Poll in Message
+//@route           PUT /api/Message/poll/vote
+//@access          Protected
+const votePoll = asyncHandler(async (req, res) => {
+  const { messageId, optionIndex } = req.body;
+
+  if (!messageId || optionIndex === undefined) {
+    res.status(400);
+    throw new Error("messageId and optionIndex are required");
+  }
+
+  const message = await Message.findById(messageId);
+  if (!message || !message.poll || !message.poll.options) {
+    res.status(404);
+    throw new Error("Poll not found");
+  }
+
+  const userIdStr = req.user._id.toString();
+  const options = message.poll.options;
+  const targetOption = options[optionIndex];
+
+  if (!targetOption) {
+    res.status(400);
+    throw new Error("Invalid option index");
+  }
+
+  const hasVotedForThis = targetOption.votes.some(
+    (v) => v.toString() === userIdStr
+  );
+
+  if (hasVotedForThis) {
+    // Toggle off (unvote)
+    targetOption.votes = targetOption.votes.filter(
+      (v) => v.toString() !== userIdStr
+    );
+  } else {
+    if (!message.poll.allowMultipleAnswers) {
+      // Single answer allowed: remove vote from all other options first
+      options.forEach((opt) => {
+        opt.votes = opt.votes.filter((v) => v.toString() !== userIdStr);
+      });
+    }
+    // Add vote to target option
+    targetOption.votes.push(req.user._id);
+  }
+
+  await message.save();
+
+  let updatedMessage = await Message.findById(messageId)
+    .populate("sender", "name pic email")
+    .populate("chat")
+    .populate("reactions.user", "name pic")
+    .populate("poll.options.votes", "name pic")
+    .populate({
+      path: "replyTo",
+      populate: { path: "sender", select: "name pic" },
+    });
+
+  updatedMessage = await User.populate(updatedMessage, {
+    path: "chat.users",
+    select: "name pic email",
+  });
+
+  res.json(updatedMessage);
 });
 
 //@description     Add or Toggle Reaction on Message
@@ -138,6 +235,7 @@ const toggleReaction = asyncHandler(async (req, res) => {
     .populate("sender", "name pic email")
     .populate("chat")
     .populate("reactions.user", "name pic")
+    .populate("poll.options.votes", "name pic")
     .populate({
       path: "replyTo",
       populate: { path: "sender", select: "name pic" },
@@ -151,4 +249,10 @@ const toggleReaction = asyncHandler(async (req, res) => {
   res.json(updatedMessage);
 });
 
-module.exports = { allMessages, sendMessage, deleteMessage, toggleReaction };
+module.exports = {
+  allMessages,
+  sendMessage,
+  deleteMessage,
+  votePoll,
+  toggleReaction,
+};

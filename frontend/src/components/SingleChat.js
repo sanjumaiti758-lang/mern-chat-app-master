@@ -2,11 +2,31 @@ import { FormControl } from "@chakra-ui/form-control";
 import { Input } from "@chakra-ui/input";
 import { Box, Text } from "@chakra-ui/layout";
 import "./styles.css";
-import { IconButton, Spinner, useToast } from "@chakra-ui/react";
+import {
+  IconButton,
+  Spinner,
+  useToast,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  Button,
+  useDisclosure,
+  Checkbox,
+  VStack,
+  HStack,
+} from "@chakra-ui/react";
 import { getSender, getSenderFull } from "../config/ChatLogics";
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
-import { ArrowBackIcon, CloseIcon } from "@chakra-ui/icons";
+import { ArrowBackIcon, CloseIcon, AddIcon, DeleteIcon } from "@chakra-ui/icons";
 import ProfileModal from "./miscellaneous/ProfileModal";
 import ScrollableChat from "./ScrollableChat";
 import Lottie from "react-lottie";
@@ -31,7 +51,20 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const [istyping, setIsTyping] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
   const [mediaLoading, setMediaLoading] = useState(false);
+
+  // Poll state
+  const {
+    isOpen: isPollOpen,
+    onOpen: onPollOpen,
+    onClose: onPollClose,
+  } = useDisclosure();
+  const [pollQuestion, setPollQuestion] = useState("");
+  const [pollOptions, setPollOptions] = useState(["", ""]);
+  const [allowMultiple, setAllowMultiple] = useState(false);
+  const [pollLoading, setPollLoading] = useState(false);
+
   const mediaInputRef = useRef(null);
+  const docInputRef = useRef(null);
 
   const toast = useToast();
 
@@ -172,7 +205,8 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
         throw new Error("Failed to upload media to cloud");
       }
 
-      const mediaType = cloudData.resource_type === "video" || isVideo ? "video" : "image";
+      const mediaType =
+        cloudData.resource_type === "video" || isVideo ? "video" : "image";
       const config = {
         headers: {
           "Content-type": "application/json",
@@ -180,7 +214,8 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
         },
       };
 
-      const caption = newMessage.trim() || (mediaType === "video" ? "🎥 Video" : "📷 Photo");
+      const caption =
+        newMessage.trim() || (mediaType === "video" ? "🎥 Video" : "📷 Photo");
       const currentReplyTo = replyingTo ? replyingTo._id : null;
 
       setNewMessage("");
@@ -205,7 +240,8 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     } catch (err) {
       toast({
         title: "Error Occured!",
-        description: err.response?.data?.message || err.message || "Failed to upload media",
+        description:
+          err.response?.data?.message || err.message || "Failed to upload media",
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -213,6 +249,219 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       });
       setMediaLoading(false);
       if (mediaInputRef.current) mediaInputRef.current.value = "";
+    }
+  };
+
+  const handleDocumentUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setMediaLoading(true);
+      toast({
+        title: "Uploading document...",
+        status: "info",
+        duration: 3000,
+        isClosable: true,
+        position: "bottom",
+      });
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "chat-app");
+      formData.append("cloud_name", "piyushproj");
+
+      const res = await fetch(
+        "https://api.cloudinary.com/v1_1/piyushproj/auto/upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+      const cloudData = await res.json();
+      const mediaUrl = cloudData.secure_url || cloudData.url;
+
+      if (!mediaUrl) {
+        throw new Error("Failed to upload document");
+      }
+
+      // Format file size
+      let sizeStr = "";
+      if (file.size < 1024 * 1024) {
+        sizeStr = `${Math.round(file.size / 1024)} KB`;
+      } else {
+        sizeStr = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+      }
+
+      const config = {
+        headers: {
+          "Content-type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+      };
+
+      const currentReplyTo = replyingTo ? replyingTo._id : null;
+      setReplyingTo(null);
+
+      const { data } = await axios.post(
+        "/api/message",
+        {
+          content: file.name,
+          chatId: selectedChat._id || selectedChat,
+          mediaUrl: mediaUrl,
+          mediaType: "document",
+          fileName: file.name,
+          fileSize: sizeStr,
+          replyTo: currentReplyTo,
+        },
+        config
+      );
+
+      if (socket) socket.emit("new message", data);
+      setMessages((prev) => [...prev, data]);
+      setMediaLoading(false);
+      if (docInputRef.current) docInputRef.current.value = "";
+    } catch (err) {
+      toast({
+        title: "Error Occured!",
+        description:
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to upload document",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+        position: "bottom",
+      });
+      setMediaLoading(false);
+      if (docInputRef.current) docInputRef.current.value = "";
+    }
+  };
+
+  // Poll handlers
+  const handleAddPollOption = () => {
+    if (pollOptions.length < 8) {
+      setPollOptions([...pollOptions, ""]);
+    }
+  };
+
+  const handleRemovePollOption = (index) => {
+    if (pollOptions.length > 2) {
+      setPollOptions(pollOptions.filter((_, idx) => idx !== index));
+    }
+  };
+
+  const handlePollOptionChange = (value, index) => {
+    const updated = [...pollOptions];
+    updated[index] = value;
+    setPollOptions(updated);
+  };
+
+  const handleCreatePoll = async () => {
+    if (!pollQuestion.trim()) {
+      toast({
+        title: "Please ask a question",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+        position: "bottom",
+      });
+      return;
+    }
+
+    const validOptions = pollOptions.filter((opt) => opt.trim().length > 0);
+    if (validOptions.length < 2) {
+      toast({
+        title: "Please provide at least 2 options",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+        position: "bottom",
+      });
+      return;
+    }
+
+    try {
+      setPollLoading(true);
+      const config = {
+        headers: {
+          "Content-type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+      };
+
+      const currentReplyTo = replyingTo ? replyingTo._id : null;
+      setReplyingTo(null);
+
+      const { data } = await axios.post(
+        "/api/message",
+        {
+          content: `📊 Poll: ${pollQuestion.trim()}`,
+          chatId: selectedChat._id || selectedChat,
+          poll: {
+            question: pollQuestion.trim(),
+            options: validOptions,
+            allowMultipleAnswers: allowMultiple,
+          },
+          replyTo: currentReplyTo,
+        },
+        config
+      );
+
+      if (socket) socket.emit("new message", data);
+      setMessages((prev) => [...prev, data]);
+      setPollLoading(false);
+      setPollQuestion("");
+      setPollOptions(["", ""]);
+      setAllowMultiple(false);
+      onPollClose();
+    } catch (err) {
+      toast({
+        title: "Error Occured!",
+        description:
+          err.response?.data?.message || err.message || "Failed to create poll",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+        position: "bottom",
+      });
+      setPollLoading(false);
+    }
+  };
+
+  const handleVotePoll = async (messageId, optionIndex) => {
+    try {
+      const config = {
+        headers: {
+          "Content-type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+      };
+
+      const { data } = await axios.put(
+        "/api/message/poll/vote",
+        {
+          messageId,
+          optionIndex,
+        },
+        config
+      );
+
+      setMessages((prev) =>
+        prev.map((m) => (m._id === data._id ? data : m))
+      );
+
+      if (socket) socket.emit("poll vote", data);
+    } catch (error) {
+      toast({
+        title: "Error Occured!",
+        description:
+          error.response?.data?.message || "Failed to record vote",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+        position: "bottom-right",
+      });
     }
   };
 
@@ -254,6 +503,9 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const handleDeleteMessage = async (messageId) => {
     if (!window.confirm("Are you sure you want to delete this message?")) return;
 
+    // Optimistically remove from state immediately
+    setMessages((prev) => prev.filter((m) => m._id !== messageId));
+
     try {
       const config = {
         headers: {
@@ -261,7 +513,6 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
         },
       };
       await axios.delete(`/api/message/${messageId}`, config);
-      setMessages((prev) => prev.filter((m) => m._id !== messageId));
 
       if (socket) {
         socket.emit("delete message", {
@@ -278,15 +529,18 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
         position: "bottom-right",
       });
     } catch (error) {
-      toast({
-        title: "Error Occured!",
-        description:
-          error.response?.data?.message || "Failed to delete message",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-        position: "bottom-right",
-      });
+      // If already deleted from server or 404, don't show error toast
+      if (error.response?.status !== 404) {
+        toast({
+          title: "Error Occured!",
+          description:
+            error.response?.data?.message || "Failed to delete message",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+          position: "bottom-right",
+        });
+      }
     }
   };
 
@@ -329,6 +583,12 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       );
     };
 
+    const handlePollUpdate = (updatedMessage) => {
+      setMessages((prev) =>
+        prev.map((m) => (m._id === updatedMessage._id ? updatedMessage : m))
+      );
+    };
+
     const handleMessageDeleted = ({ messageId }) => {
       setMessages((prev) => prev.filter((m) => m._id !== messageId));
     };
@@ -336,6 +596,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     if (socket) {
       socket.on("message recieved", handleMessageReceived);
       socket.on("message reaction updated", handleReactionUpdate);
+      socket.on("poll updated", handlePollUpdate);
       socket.on("message deleted", handleMessageDeleted);
     }
 
@@ -343,6 +604,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       if (socket) {
         socket.off("message recieved", handleMessageReceived);
         socket.off("message reaction updated", handleReactionUpdate);
+        socket.off("poll updated", handlePollUpdate);
         socket.off("message deleted", handleMessageDeleted);
       }
     };
@@ -433,6 +695,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                   onReaction={handleReaction}
                   onReply={setReplyingTo}
                   onDelete={handleDeleteMessage}
+                  onVotePoll={handleVotePoll}
                 />
               </div>
             )}
@@ -464,6 +727,8 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                     {replyingTo.mediaUrl
                       ? replyingTo.mediaType === "video"
                         ? "🎥 Video"
+                        : replyingTo.mediaType === "document"
+                        ? `📄 ${replyingTo.fileName || "Document"}`
                         : "📷 Photo"
                       : replyingTo.content}
                   </Text>
@@ -503,38 +768,86 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                   onChange={handleMediaUpload}
                 />
 
-                {/* Attachment Button */}
-                <IconButton
-                  aria-label="Send photo or video"
-                  title="Send photo or video"
-                  bg="#FFFFFF"
-                  _hover={{ bg: "#F0F2F5" }}
-                  color="gray.600"
-                  borderRadius="full"
-                  isLoading={mediaLoading}
-                  onClick={() => mediaInputRef.current && mediaInputRef.current.click()}
-                  icon={
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                    </svg>
-                  }
+                {/* Hidden File Input for Documents */}
+                <input
+                  type="file"
+                  ref={docInputRef}
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.csv"
+                  style={{ display: "none" }}
+                  onChange={handleDocumentUpload}
                 />
+
+                {/* Attachment Menu (Photos/Videos, Document, Poll) */}
+                <Menu placement="top-start">
+                  <MenuButton
+                    as={IconButton}
+                    aria-label="Attach file or poll"
+                    title="Attach file or poll"
+                    bg="#FFFFFF"
+                    _hover={{ bg: "#F0F2F5" }}
+                    color="gray.600"
+                    borderRadius="full"
+                    isLoading={mediaLoading}
+                    icon={
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                      </svg>
+                    }
+                  />
+                  <MenuList
+                    p={2}
+                    minW="200px"
+                    borderRadius="14px"
+                    boxShadow="0 6px 20px rgba(0,0,0,0.15)"
+                  >
+                    <MenuItem
+                      icon={<span style={{ fontSize: "18px" }}>📷</span>}
+                      onClick={() =>
+                        mediaInputRef.current && mediaInputRef.current.click()
+                      }
+                      fontWeight="500"
+                      py={2}
+                    >
+                      Photos & Videos
+                    </MenuItem>
+                    <MenuItem
+                      icon={<span style={{ fontSize: "18px" }}>📄</span>}
+                      onClick={() =>
+                        docInputRef.current && docInputRef.current.click()
+                      }
+                      fontWeight="500"
+                      py={2}
+                    >
+                      Document
+                    </MenuItem>
+                    <MenuItem
+                      icon={<span style={{ fontSize: "18px" }}>📊</span>}
+                      onClick={onPollOpen}
+                      fontWeight="500"
+                      py={2}
+                    >
+                      Poll
+                    </MenuItem>
+                  </MenuList>
+                </Menu>
 
                 <Input
                   variant="filled"
                   bg="#FFFFFF"
                   _focus={{ bg: "#FFFFFF", borderColor: "#00A884" }}
                   borderRadius="24px"
-                  placeholder={replyingTo ? "Type your reply..." : "Type a message..."}
+                  placeholder={
+                    replyingTo ? "Type your reply..." : "Type a message..."
+                  }
                   value={newMessage}
                   onChange={typingHandler}
                   onKeyDown={sendMessage}
@@ -568,6 +881,99 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
               </Box>
             </FormControl>
           </Box>
+
+          {/* Poll Creation Modal */}
+          <Modal isOpen={isPollOpen} onClose={onPollClose} isCentered size="md">
+            <ModalOverlay />
+            <ModalContent borderRadius="16px">
+              <ModalHeader fontSize="20px" fontWeight="bold">
+                Create a Poll 📊
+              </ModalHeader>
+              <ModalCloseButton />
+              <ModalBody>
+                <VStack spacing={4} align="stretch">
+                  <Box>
+                    <Text fontWeight="600" mb={1} fontSize="14px">
+                      Question
+                    </Text>
+                    <Input
+                      placeholder="Ask a question..."
+                      value={pollQuestion}
+                      onChange={(e) => setPollQuestion(e.target.value)}
+                      focusBorderColor="#00A884"
+                    />
+                  </Box>
+
+                  <Box>
+                    <Text fontWeight="600" mb={1} fontSize="14px">
+                      Options
+                    </Text>
+                    <VStack spacing={2} align="stretch">
+                      {pollOptions.map((opt, idx) => (
+                        <HStack key={idx} spacing={2}>
+                          <Input
+                            placeholder={`Option ${idx + 1}`}
+                            value={opt}
+                            onChange={(e) =>
+                              handlePollOptionChange(e.target.value, idx)
+                            }
+                            focusBorderColor="#00A884"
+                          />
+                          {pollOptions.length > 2 && (
+                            <IconButton
+                              size="sm"
+                              variant="ghost"
+                              colorScheme="red"
+                              icon={<DeleteIcon />}
+                              onClick={() => handleRemovePollOption(idx)}
+                              aria-label="Remove option"
+                            />
+                          )}
+                        </HStack>
+                      ))}
+                    </VStack>
+
+                    {pollOptions.length < 8 && (
+                      <Button
+                        leftIcon={<AddIcon boxSize={2.5} />}
+                        size="sm"
+                        variant="ghost"
+                        colorScheme="teal"
+                        color="#00A884"
+                        mt={2}
+                        onClick={handleAddPollOption}
+                      >
+                        Add Option
+                      </Button>
+                    )}
+                  </Box>
+
+                  <Checkbox
+                    isChecked={allowMultiple}
+                    onChange={(e) => setAllowMultiple(e.target.checked)}
+                    colorScheme="whatsapp"
+                  >
+                    Allow multiple answers
+                  </Checkbox>
+                </VStack>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="ghost" mr={3} onClick={onPollClose}>
+                  Cancel
+                </Button>
+                <Button
+                  colorScheme="whatsapp"
+                  bg="#00A884"
+                  _hover={{ bg: "#008F6F" }}
+                  color="white"
+                  isLoading={pollLoading}
+                  onClick={handleCreatePoll}
+                >
+                  Create Poll
+                </Button>
+              </ModalFooter>
+            </ModalContent>
+          </Modal>
         </>
       ) : (
         <Box d="flex" alignItems="center" justifyContent="center" h="100%">

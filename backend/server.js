@@ -135,6 +135,15 @@ if (!process.env.VERCEL) {
       socket.in(chatId).emit("message deleted", data);
     });
 
+    socket.on("poll vote", (updatedMessage) => {
+      var chat = updatedMessage && updatedMessage.chat;
+      if (!chat || !chat.users) return;
+
+      chat.users.forEach((user) => {
+        socket.in(user._id).emit("poll updated", updatedMessage);
+      });
+    });
+
     socket.on("disconnect", () => {
       console.log("USER DISCONNECTED");
       if (userRoom) socket.leave(userRoom);
