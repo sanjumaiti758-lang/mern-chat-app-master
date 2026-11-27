@@ -75,12 +75,15 @@ const connectDB = async () => {
   // Local development: Try Atlas/Remote URI first if provided
   if (uri && uri !== "memory" && !uri.includes("<db_password>")) {
     try {
-      const conn = await mongoose.connect(uri, { serverSelectionTimeoutMS: 3000 });
+      const conn = await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
       console.log(`MongoDB Connected: ${conn.connection.host}`.cyan.underline);
       await seedUsers();
       return;
     } catch (error) {
-      console.log(`Could not connect to remote MongoDB (${error.message}). Starting local in-memory database...`.yellow);
+      console.log(
+        `Remote MongoDB Atlas connection failed (IP not whitelisted). Starting local in-memory database...`
+          .yellow
+      );
     }
   }
 
